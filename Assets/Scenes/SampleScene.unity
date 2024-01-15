@@ -471,7 +471,7 @@ MonoBehaviour:
   coloring: 1
   smoothPolygons: 1
   smoothEdges: 1
-  heightGenerator: 1
+  heightGenerator: 0
 --- !u!4 &1128199832
 Transform:
   m_ObjectHideFlags: 0
