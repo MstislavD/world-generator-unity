@@ -7,13 +7,25 @@ public class WorldGenerator
     const int sphereLevels = 6;
 
     PolygonSphere[] spheres;
+    IHeightGenerator heightGenerator;
 
     public WorldGenerator(IHeightGenerator heightGenerator)
     {
+        this.heightGenerator = heightGenerator;
         spheres = new PolygonSphere[sphereLevels];
         for (int i = 0; i < sphereLevels; i++)
         {
             spheres[i] = new PolygonSphere((int)Mathf.Pow(2, i) - 1, heightGenerator);
+        }
+    }
+
+    public void SetHeightGenerator(IHeightGenerator generator)
+    {
+        heightGenerator = generator;
+        foreach (PolygonSphere sphere in spheres)
+        {
+            sphere.SetHeightGenerator(generator);
+            sphere.RecalculateData();
         }
     }
 
@@ -23,9 +35,10 @@ public class WorldGenerator
 
     public void Regenerate()
     {
+        heightGenerator.Regenerate();
         for (int i = 0; i < spheres.Length; i++)
         {
-            spheres[i].RegenerateData();
+            spheres[i].RecalculateData();
         }
     }
 

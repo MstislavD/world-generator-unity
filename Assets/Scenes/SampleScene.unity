@@ -465,13 +465,19 @@ MonoBehaviour:
   polygonMesh: {fileID: 1968548735}
   edgeMesh: {fileID: 1556763577}
   sphereCollider: {fileID: 1968548733}
-  seaLevel: 0.7
+  seaLevel: 0.6
   ridgeDensity: 0.1
   normalsType: 0
   coloring: 1
   smoothPolygons: 1
   smoothEdges: 1
-  heightGenerator: 0
+  heightGenerator: 1
+  noiseSettings:
+    seed: 100
+    frequency: 2
+    octaves: 4
+    lacunarity: 2
+    persistence: 0.5
 --- !u!4 &1128199832
 Transform:
   m_ObjectHideFlags: 0

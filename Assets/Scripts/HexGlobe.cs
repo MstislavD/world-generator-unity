@@ -25,6 +25,7 @@ public class HexGlobe : MonoBehaviour
     MeshTopology meshTopology = MeshTopology.Triangles;
 
     float seaLevelOld;
+    HeightGeneratorType heightGenTypeCheck;
 
     [SerializeField]
     MeshFilter polygonMesh, edgeMesh;
@@ -53,13 +54,20 @@ public class HexGlobe : MonoBehaviour
     [SerializeField]
     HeightGeneratorType heightGenerator = HeightGeneratorType.Random;
 
+    [SerializeField]
+    Noise.Settings noiseSettings = Noise.Settings.Default;
+
     private void Awake()
     {
-        IHeightGenerator hGen = heightGenerator == HeightGeneratorType.Random ? new HeightGenerator() : new PerlinHeightGenerator();
+        IHeightGenerator hGen = heightGenerator == HeightGeneratorType.Random ?
+            new HeightGenerator() : 
+            new PerlinHeightGenerator(noiseSettings);
 
         seaLevelOld = seaLevel;
-        sphereLevel = 3;
-        dataLevel = 3;
+        heightGenTypeCheck = heightGenerator;
+
+        sphereLevel = 5;
+        dataLevel = 5;
         generator = new WorldGenerator(hGen);
         initiateMeshing = true;
         Regenerate();
@@ -120,6 +128,16 @@ public class HexGlobe : MonoBehaviour
 
     private void OnValidate()
     {
+        if (generator != null && (heightGenTypeCheck != heightGenerator || heightGenerator == HeightGeneratorType.Perlin))
+        {
+            IHeightGenerator hGen = heightGenerator == HeightGeneratorType.Random ?
+                new HeightGenerator() : new PerlinHeightGenerator(noiseSettings);
+            generator.SetHeightGenerator(hGen);
+
+            heightGenTypeCheck = heightGenerator;
+            initiateRecoloring = true;
+            initiateMeshing = smoothPolygons ? true : initiateMeshing;
+        }
         if (seaLevelOld != seaLevel)
         {
             seaLevelOld = seaLevel;
@@ -129,7 +147,7 @@ public class HexGlobe : MonoBehaviour
         else
         {
             initiateMeshing = true;
-        }        
+        }      
     }
 
     public void Regenerate()

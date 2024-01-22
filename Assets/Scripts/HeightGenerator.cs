@@ -1,15 +1,25 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
+
 
 public interface IHeightGenerator
 {
     public float GenerateHeight(UnityEngine.Vector3 vector);
+
+    public float GenerateRidge();
+
     public void Regenerate();
 }
 
 public class HeightGenerator : IHeightGenerator
 {
     public float GenerateHeight(UnityEngine.Vector3 vector)
+    {
+        return UnityEngine.Random.Range(0f, 1f);
+    }
+
+    public float GenerateRidge()
     {
         return UnityEngine.Random.Range(0f, 1f);
     }
@@ -34,21 +44,21 @@ public class PerlinHeightGenerator : IHeightGenerator
 
     public PerlinHeightGenerator(Noise.Settings settings)
     {
-        settings.seed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
         this.settings = settings;
     }
 
     public float GenerateHeight(UnityEngine.Vector3 vector)
     {
+        UnityEngine.Vector3 normalized_vector = UnityEngine.Vector3.Normalize(vector);
         float height;
 
         if (simplex)
         {
-            height = Noise.Evaluate<Noise.Simplex3D<Noise.Perlin>>(vector, settings);
+            height = Noise.Evaluate<Noise.Simplex3D<Noise.Perlin>>(normalized_vector, settings);
         }
         else
         {
-            height = Noise.Evaluate<Noise.Lattice3D<Noise.LatticeNormal, Noise.Perlin>>(vector, settings);
+            height = Noise.Evaluate<Noise.Lattice3D<Noise.LatticeNormal, Noise.Perlin>>(normalized_vector, settings);
         }      
       
         return height + 0.5f;
@@ -69,5 +79,10 @@ public class PerlinHeightGenerator : IHeightGenerator
         newSettings.lacunarity = lacunarity;
         newSettings.persistence = persistence;
         settings = newSettings;
+    }
+
+    public float GenerateRidge()
+    {
+        return 1f;
     }
 }

@@ -41,7 +41,7 @@ public class PolygonSphere
         generateEdges();
         polygonData = new PolygonData[polygons.Count];
         edgeData = new EdgeData[edges.Count];
-        RegenerateData();
+        RecalculateData();
     }
 
     public PolygonData GetPolygonData(int index) => polygonData[index];
@@ -215,9 +215,14 @@ public class PolygonSphere
         {
             polygonData[i] = generatePolygonData(i);
         }
+
+        for (int i = 0; i < edges.Count; i++)
+        {
+            edgeData[i] = generateEdgeData();
+        }
     }
 
-        public string GetPolygonInfo(int polygonIndex)
+    public string GetPolygonInfo(int polygonIndex)
     {
         if (BandSize == 0)
         {
@@ -241,6 +246,11 @@ public class PolygonSphere
         {
             return "Hexagon: " + polygonIndex + ", Zone: " + zoneIndex + parentInfo;
         }
+    }
+
+    public void SetHeightGenerator(IHeightGenerator hGen)
+    {
+        heightGenerator = hGen;
     }
 
     int getNeighbor(int polygonIndex, int direction)
@@ -661,8 +671,7 @@ public class PolygonSphere
 
     EdgeData generateEdgeData()
     {
-        EdgeData data = new EdgeData();
-        data.ridge = UnityEngine.Random.Range(0f, 1f);
+        EdgeData data = new EdgeData { ridge = heightGenerator.GenerateRidge() };
         return data;
     }
 }
