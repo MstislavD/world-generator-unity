@@ -21,6 +21,9 @@ public static partial class Noise
         public float persistence;
 
         public static Settings Default => new Settings { frequency = 4, octaves = 1, lacunarity = 2, persistence = 0.5f };
+
+        public Settings ChangeSeed(int new_seed) => new Settings {
+            frequency = frequency, octaves = octaves, lacunarity = lacunarity, seed = new_seed, persistence = persistence };
     }
 
     public interface INoise

@@ -26,22 +26,19 @@ public class PolygonSphere
     List<Edge> edges;
     PolygonData[] polygonData;
     EdgeData[] edgeData;
-    IHeightGenerator heightGenerator;
 
     public int BandSize { get; }
 
-    public PolygonSphere(int bandSize, IHeightGenerator heightGenerator)
+    public PolygonSphere(int bandSize)
     {
         polygons = new List<Polygon>();
         edges = new List<Edge>();
         BandSize = bandSize;
-        this.heightGenerator = heightGenerator;
 
         generatePolygons();
         generateEdges();
         polygonData = new PolygonData[polygons.Count];
         edgeData = new EdgeData[edges.Count];
-        RecalculateData();
     }
 
     public PolygonData GetPolygonData(int index) => polygonData[index];
@@ -194,31 +191,16 @@ public class PolygonSphere
         }
     }
 
-    public void RegenerateData()
+    public void RegenerateData(IHeightGenerator heightGenerator)
     {
-        heightGenerator.Regenerate();
-
         for (int i = 0; i < polygons.Count; i++)
         {
-            polygonData[i] = generatePolygonData(i);
+            polygonData[i] = generatePolygonData(i, heightGenerator);
         }
 
         for (int i = 0; i < edges.Count; i++)
         {
-            edgeData[i] = generateEdgeData();
-        }
-    }
-
-    public void RecalculateData()
-    {
-        for (int i = 0; i < polygons.Count; i++)
-        {
-            polygonData[i] = generatePolygonData(i);
-        }
-
-        for (int i = 0; i < edges.Count; i++)
-        {
-            edgeData[i] = generateEdgeData();
+            edgeData[i] = generateEdgeData(heightGenerator);
         }
     }
 
@@ -246,11 +228,6 @@ public class PolygonSphere
         {
             return "Hexagon: " + polygonIndex + ", Zone: " + zoneIndex + parentInfo;
         }
-    }
-
-    public void SetHeightGenerator(IHeightGenerator hGen)
-    {
-        heightGenerator = hGen;
     }
 
     int getNeighbor(int polygonIndex, int direction)
@@ -641,7 +618,7 @@ public class PolygonSphere
         return reduction;
     }
 
-    PolygonData generatePolygonData(int polygonIndex)
+    PolygonData generatePolygonData(int polygonIndex, IHeightGenerator heightGenerator)
     {
         PolygonData data = new PolygonData();
         data.color = UnityEngine.Random.ColorHSV(0f, 1f, 0.5f, 1f, 0.25f, 1f, 1f, 1f);
@@ -669,7 +646,7 @@ public class PolygonSphere
         return data;
     }
 
-    EdgeData generateEdgeData()
+    EdgeData generateEdgeData(IHeightGenerator heightGenerator)
     {
         EdgeData data = new EdgeData { ridge = heightGenerator.GenerateRidge() };
         return data;

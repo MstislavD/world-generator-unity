@@ -123,94 +123,6 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &334124148
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 334124150}
-  - component: {fileID: 334124149}
-  - component: {fileID: 334124152}
-  - component: {fileID: 334124151}
-  m_Layer: 0
-  m_Name: Hex Globe Perlin
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 0
---- !u!114 &334124149
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 334124148}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 710598a10fd30774d99a430df903ff7c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  polygonMesh: {fileID: 1968548735}
-  sphereCollider: {fileID: 1968548733}
-  seaLevel: 0.7
-  normalsType: 0
-  smoothPolygons: 0
-  sphereSize: 25
-  frequency: 1
-  octaves: 4
-  lacunarity: 2
-  persistence: 0.75
---- !u!4 &334124150
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 334124148}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.026420204, y: 0.61513466, z: -1.0093106}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &334124151
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 334124148}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7a16d248b2bb25b4d8eb743ba386d19e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  latitudeRotation: {fileID: 1377802192}
-  longitudeRotation: {fileID: 635259349}
-  zoomView: {fileID: 334124152}
-  automaticRotationVelocityStep: 15
-  manualRotationSpeed: 60
-  maxLatitude: 1
---- !u!114 &334124152
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 334124148}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d09008422f1e7f94fab797a32e5fe01b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  mainCamera: {fileID: 963194227}
-  zoomStep: 1.5
 --- !u!1 &635259348
 GameObject:
   m_ObjectHideFlags: 0
@@ -471,13 +383,13 @@ MonoBehaviour:
   coloring: 1
   smoothPolygons: 1
   smoothEdges: 1
-  heightGenerator: 1
-  noiseSettings:
-    seed: 100
-    frequency: 2
-    octaves: 4
+  heightGeneratorType: 1
+  heightPerlinSettings:
+    seed: 0
+    frequency: 1
+    octaves: 6
     lacunarity: 2
-    persistence: 0.5
+    persistence: 0.7
 --- !u!4 &1128199832
 Transform:
   m_ObjectHideFlags: 0
@@ -766,4 +678,3 @@ SceneRoots:
   - {fileID: 705507995}
   - {fileID: 1377802192}
   - {fileID: 1128199832}
-  - {fileID: 334124150}

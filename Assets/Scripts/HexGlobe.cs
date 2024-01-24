@@ -6,17 +6,12 @@ public class HexGlobe : MonoBehaviour
 {
     enum NormalType { Polyhedron, Sphere }
 
-    enum HeightGeneratorType { Random, Perlin }
-
     public enum Coloring { Zones, Terrain, Random, White }
 
     static Color[] neighborColors = { Color.red, Color.white, Color.white, Color.cyan, Color.blue, Color.magenta };
 
     static Color[] typeColors = { Color.red, Color.yellow, Color.green };
 
-    const int debugSeed = -1;
-
-    int seed;
     bool initiateMeshing = false;
     bool initiateRecoloring = false;
     Color[] defaultColors, modifiedColors;
@@ -24,14 +19,17 @@ public class HexGlobe : MonoBehaviour
     int sphereLevel, dataLevel;
     MeshTopology meshTopology = MeshTopology.Triangles;
 
-    float seaLevelOld;
-    HeightGeneratorType heightGenTypeCheck;
-
     [SerializeField]
     MeshFilter polygonMesh, edgeMesh;
 
     [SerializeField]
     MeshCollider sphereCollider;
+
+    [SerializeField]
+    bool debugSeed = false;
+
+    [SerializeField]
+    int seed;
 
     [SerializeField, Range(0f, 1f)]
     float seaLevel = 0.7f;
@@ -52,24 +50,16 @@ public class HexGlobe : MonoBehaviour
     bool smoothEdges = true;
 
     [SerializeField]
-    HeightGeneratorType heightGenerator = HeightGeneratorType.Random;
+    WorldGenerator.HeightGeneratorType heightGeneratorType = WorldGenerator.HeightGeneratorType.Random;
 
     [SerializeField]
-    Noise.Settings noiseSettings = Noise.Settings.Default;
+    Noise.Settings heightPerlinSettings = Noise.Settings.Default;
 
     private void Awake()
     {
-        IHeightGenerator hGen = heightGenerator == HeightGeneratorType.Random ?
-            new HeightGenerator() : 
-            new PerlinHeightGenerator(noiseSettings);
-
-        seaLevelOld = seaLevel;
-        heightGenTypeCheck = heightGenerator;
-
         sphereLevel = 5;
         dataLevel = 5;
-        generator = new WorldGenerator(hGen);
-        initiateMeshing = true;
+        generator = new WorldGenerator(s => Debug.Log(s));
         Regenerate();
     }
 
@@ -128,21 +118,15 @@ public class HexGlobe : MonoBehaviour
 
     private void OnValidate()
     {
-        if (generator != null && (heightGenTypeCheck != heightGenerator || heightGenerator == HeightGeneratorType.Perlin))
+        if (generator != null)
         {
-            IHeightGenerator hGen = heightGenerator == HeightGeneratorType.Random ?
-                new HeightGenerator() : new PerlinHeightGenerator(noiseSettings);
-            generator.SetHeightGenerator(hGen);
-
-            heightGenTypeCheck = heightGenerator;
-            initiateRecoloring = true;
-            initiateMeshing = smoothPolygons ? true : initiateMeshing;
-        }
-        if (seaLevelOld != seaLevel)
-        {
-            seaLevelOld = seaLevel;
-            initiateRecoloring = true;
-            initiateMeshing = smoothPolygons ? true : initiateMeshing;
+            bool updated = generator.UpdateSettings(heightGeneratorType, heightPerlinSettings, seaLevel, seed);
+            if (updated)
+            {
+                generator.Regenerate();
+                initiateRecoloring = true;
+                initiateMeshing = smoothPolygons ? true : initiateMeshing;
+            }            
         }
         else
         {
@@ -152,11 +136,16 @@ public class HexGlobe : MonoBehaviour
 
     public void Regenerate()
     {
-        seed = debugSeed < 0 ? Random.Range(0, int.MaxValue) : debugSeed;
+        seed = debugSeed ? seed : Random.Range(int.MinValue, int.MaxValue);
         Random.InitState(seed);
-        generator.Regenerate();
-        initiateRecoloring = true;
-        initiateMeshing = smoothPolygons ? true : initiateMeshing;
+        bool updated = generator.UpdateSettings(heightGeneratorType, heightPerlinSettings, seaLevel, seed);
+
+        if (updated || !debugSeed)
+        {
+            generator.Regenerate();
+            initiateRecoloring = true;
+            initiateMeshing = smoothPolygons ? true : initiateMeshing;
+        }        
     }
 
     public void ChangeSphereLevel(int level)
@@ -315,7 +304,7 @@ public class HexGlobe : MonoBehaviour
     void recolorMesh()
     {
         PolygonSphere sphere = generator.GetSphere(sphereLevel);
-        PolygonSphere dataSphere = generator.GetSphere(Unity.Mathematics.math.min(dataLevel, sphereLevel));
+        PolygonSphere dataSphere = generator.GetSphere(getDataLevel);
 
         List<Color> colors = new List<Color>();
 
@@ -332,7 +321,7 @@ public class HexGlobe : MonoBehaviour
             }
             else if (coloring == Coloring.Terrain)
             {
-                color = data.height < seaLevel ? Color.blue : Color.green;
+                color = generator.RegionIsSea(getDataLevel, regionIndex) ? Color.blue : Color.green;
             }
             else if (coloring == Coloring.Zones)
             {

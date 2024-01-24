@@ -1,44 +1,90 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
+using System.Diagnostics;
 
 public class WorldGenerator
 {
+    public enum HeightGeneratorType { Random, Perlin }
+
     const int sphereLevels = 6;
 
     PolygonSphere[] spheres;
     IHeightGenerator heightGenerator;
+    Action<string> logger = s => Console.WriteLine(s);
 
-    public WorldGenerator(IHeightGenerator heightGenerator)
+    HeightGeneratorType hGenType;
+    Noise.Settings heightPerlinSettings;
+    float seaLevel;
+    int seed;
+
+    public WorldGenerator(Action<string> logger)
     {
-        this.heightGenerator = heightGenerator;
+        this.logger = logger;
         spheres = new PolygonSphere[sphereLevels];
         for (int i = 0; i < sphereLevels; i++)
         {
-            spheres[i] = new PolygonSphere((int)Mathf.Pow(2, i) - 1, heightGenerator);
+            spheres[i] = new PolygonSphere((int)MathF.Pow(2, i) - 1);
         }
     }
 
-    public void SetHeightGenerator(IHeightGenerator generator)
+    public bool UpdateSettings(
+        HeightGeneratorType heightGenType,
+        Noise.Settings perlinSettings,
+        float seaLevel,
+        int seed)
     {
-        heightGenerator = generator;
-        foreach (PolygonSphere sphere in spheres)
+        bool updated = false;
+
+        if (hGenType != heightGenType || heightGenerator == null || this.seed != seed)
         {
-            sphere.SetHeightGenerator(generator);
-            sphere.RecalculateData();
+            this.seed = seed;
+            hGenType = heightGenType;
+            updated = true;
+            heightPerlinSettings = heightPerlinSettings.ChangeSeed(seed);
+            if (heightGenType == HeightGeneratorType.Random)
+            {
+                heightGenerator = new HeightGenerator(seed);
+            }
+            else if (heightGenType == HeightGeneratorType.Perlin)
+            {
+                heightGenerator = new PerlinHeightGenerator(heightPerlinSettings);
+            }
         }
+
+        if (!heightPerlinSettings.Equals(perlinSettings))
+        {
+            heightPerlinSettings = perlinSettings.ChangeSeed(seed);
+            if (heightGenType == HeightGeneratorType.Perlin)
+            {
+                updated = true;
+                heightGenerator = new PerlinHeightGenerator(heightPerlinSettings);
+            }            
+        }
+
+        if (this.seaLevel != seaLevel)
+        {
+            updated = true;
+            this.seaLevel = seaLevel;
+        }
+
+        return updated;
     }
 
     public PolygonSphere GetSphere(int level) => spheres[level];
+
+    public bool RegionIsSea(int sphereLevel, int polygonIndex)
+    {
+        return spheres[sphereLevel].GetPolygonData(polygonIndex).height < seaLevel;
+    }
 
     public int SphereCount => spheres.Length;
 
     public void Regenerate()
     {
-        heightGenerator.Regenerate();
         for (int i = 0; i < spheres.Length; i++)
         {
-            spheres[i].RecalculateData();
+            spheres[i].RegenerateData(heightGenerator);
         }
     }
 

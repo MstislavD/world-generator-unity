@@ -1,31 +1,36 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using UnityEngine;
+using System;
 
 
 public interface IHeightGenerator
 {
-    public float GenerateHeight(UnityEngine.Vector3 vector);
+    public float GenerateHeight(Vector3 vector);
 
     public float GenerateRidge();
-
-    public void Regenerate();
 }
 
 public class HeightGenerator : IHeightGenerator
 {
-    public float GenerateHeight(UnityEngine.Vector3 vector)
+    SmallXXHash hash;
+
+    public HeightGenerator(int seed)
     {
-        return UnityEngine.Random.Range(0f, 1f);
+        hash = new SmallXXHash((uint)seed);
+    }
+
+    public float GenerateHeight(Vector3 vector)
+    {
+        hash = hash.Eat(1);
+        return hash.Float01A;
     }
 
     public float GenerateRidge()
     {
-        return UnityEngine.Random.Range(0f, 1f);
-    }
-
-    public void Regenerate()
-    {
+        hash = hash.Eat(1);
+        return hash.Float01A;
     }
 }
 
@@ -35,21 +40,14 @@ public class PerlinHeightGenerator : IHeightGenerator
 
     public Noise.Settings settings { get; set; }
 
-    public PerlinHeightGenerator()
-    {
-        Noise.Settings newSettings = Noise.Settings.Default;
-        newSettings.seed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
-        settings = newSettings;
-    }
-
     public PerlinHeightGenerator(Noise.Settings settings)
     {
         this.settings = settings;
     }
 
-    public float GenerateHeight(UnityEngine.Vector3 vector)
+    public float GenerateHeight(Vector3 vector)
     {
-        UnityEngine.Vector3 normalized_vector = UnityEngine.Vector3.Normalize(vector);
+        Vector3 normalized_vector = Vector3.Normalize(vector);
         float height;
 
         if (simplex)
@@ -62,23 +60,6 @@ public class PerlinHeightGenerator : IHeightGenerator
         }      
       
         return height + 0.5f;
-    }
-
-    public void Regenerate()
-    {
-        Noise.Settings newSettings = settings;
-        newSettings.seed = UnityEngine.Random.Range(int.MinValue, int.MaxValue);
-        settings = newSettings;
-    }
-
-    public void SetNoiseParameters(int frequency, int ocatves, int lacunarity, float persistence)
-    {
-        Noise.Settings newSettings = settings;
-        newSettings.frequency = frequency;
-        newSettings.octaves = ocatves;
-        newSettings.lacunarity = lacunarity;
-        newSettings.persistence = persistence;
-        settings = newSettings;
     }
 
     public float GenerateRidge()
