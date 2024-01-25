@@ -191,11 +191,11 @@ public class PolygonSphere
         }
     }
 
-    public void RegenerateData(IHeightGenerator heightGenerator)
+    public void RegenerateData(IHeightGenerator heightGenerator, int seed)
     {
         for (int i = 0; i < polygons.Count; i++)
         {
-            polygonData[i] = generatePolygonData(i, heightGenerator);
+            polygonData[i] = generatePolygonData(i, heightGenerator, seed);
         }
 
         for (int i = 0; i < edges.Count; i++)
@@ -618,10 +618,10 @@ public class PolygonSphere
         return reduction;
     }
 
-    PolygonData generatePolygonData(int polygonIndex, IHeightGenerator heightGenerator)
+    PolygonData generatePolygonData(int polygonIndex, IHeightGenerator heightGenerator, int seed)
     {
+        SmallXXHash hash = new SmallXXHash((uint)seed);
         PolygonData data = new PolygonData();
-        data.color = UnityEngine.Random.ColorHSV(0f, 1f, 0.5f, 1f, 0.25f, 1f, 1f, 1f);
         data.height = heightGenerator.GenerateHeight(polygons[polygonIndex].Center);
         Polygon polygon = polygons[polygonIndex];
 
@@ -640,7 +640,7 @@ public class PolygonSphere
                     neighborParents[n++] = neighbor.Parent;
                 }
             }
-            data.region = neighborParents[UnityEngine.Random.Range(0f, 1f) < 0.5f ? 0 : 1];
+            data.region = neighborParents[hash.Eat(polygonIndex).Float01B < 0.5f ? 0 : 1];
         }
 
         return data;

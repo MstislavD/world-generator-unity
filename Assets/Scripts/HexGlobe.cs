@@ -118,30 +118,33 @@ public class HexGlobe : MonoBehaviour
 
     private void OnValidate()
     {
-        if (generator != null)
-        {
-            bool updated = generator.UpdateSettings(heightGeneratorType, heightPerlinSettings, seaLevel, seed);
-            if (updated)
-            {
-                generator.Regenerate();
-                initiateRecoloring = true;
-                initiateMeshing = smoothPolygons ? true : initiateMeshing;
-            }            
-        }
+        update_generator();
+        initiateMeshing = smoothPolygons ? true : initiateMeshing;
     }
 
     public void Regenerate()
-    {
+    {       
         seed = debugSeed ? seed : Random.Range(int.MinValue, int.MaxValue);
-        Random.InitState(seed);
-        bool updated = generator.UpdateSettings(heightGeneratorType, heightPerlinSettings, seaLevel, seed);
+        update_generator();
+        initiateMeshing = smoothPolygons ? true : initiateMeshing;
 
-        if (updated || !debugSeed)
+    }
+
+    void update_generator()
+    {
+        if (generator == null)
+        {
+            return;
+        }
+
+        heightPerlinSettings = heightPerlinSettings.ChangeSeed(seed);
+        bool updated = generator.UpdateSettings(heightGeneratorType, heightPerlinSettings, seaLevel, ridgeDensity, seed);
+
+        if (updated)
         {
             generator.Regenerate();
             initiateRecoloring = true;
-            initiateMeshing = smoothPolygons ? true : initiateMeshing;
-        }        
+        }
     }
 
     public void ChangeSphereLevel(int level)
@@ -232,7 +235,7 @@ public class HexGlobe : MonoBehaviour
         {
             int regionEdgeIndex = generator.GetEdgeIndex(i, sphereLevel, dataLevel);
             bool drawEdge = coloring != Coloring.White && coloring != Coloring.Zones && regionEdgeIndex > -1 &&
-                (coloring == Coloring.Random ? true : dataSphere.GetEdgeData(regionEdgeIndex).ridge < ridgeDensity);
+                (coloring == Coloring.Random ? true : generator.EdgeHasRidge(getDataLevel, regionEdgeIndex));
 
             if (drawEdge)
             {
@@ -285,7 +288,7 @@ public class HexGlobe : MonoBehaviour
         int dataLevel = getDataLevel;
         PolygonSphere sphere = generator.GetSphere(sphereLevel);
         int regionEdgeIndex = generator.GetEdgeIndex(sphere.GetEdge(p1, p2), sphereLevel, dataLevel);
-        return regionEdgeIndex > -1 && generator.GetSphere(dataLevel).GetEdgeData(regionEdgeIndex).ridge < ridgeDensity;
+        return regionEdgeIndex > -1 && generator.EdgeHasRidge(dataLevel, regionEdgeIndex);
     }
 
     bool zoneBorder(int p1, int p2)
@@ -303,6 +306,7 @@ public class HexGlobe : MonoBehaviour
 
     void recolorMesh()
     {
+        SmallXXHash hash = new SmallXXHash((uint)seed);
         PolygonSphere sphere = generator.GetSphere(sphereLevel);
         PolygonSphere dataSphere = generator.GetSphere(getDataLevel);
 
@@ -311,13 +315,12 @@ public class HexGlobe : MonoBehaviour
         for (int i = 0; i < sphere.PolygonCount; i++)
         {
             int regionIndex = generator.GetPolygonIndex(i, sphereLevel, dataLevel);
-            PolygonData data = dataSphere.GetPolygonData(regionIndex);
             var type = dataSphere.GetPolygonType(regionIndex);
 
             Color color = Color.white;
             if (coloring == Coloring.Random)
             {
-                color = data.color;
+                color = random_color(hash.Eat(regionIndex));
             }
             else if (coloring == Coloring.Terrain)
             {
@@ -336,4 +339,12 @@ public class HexGlobe : MonoBehaviour
     }
 
     int getDataLevel => Unity.Mathematics.math.min(dataLevel, sphereLevel);
+
+    Color random_color(SmallXXHash hash)
+    {
+        float hue = hash.Float01A;
+        float sat = hash.Float01B * 0.5f + 0.5f;
+        float val = hash.Float01C * 0.75f + 0.25f;
+        return Color.HSVToRGB(hue, sat, val);
+    }
 }

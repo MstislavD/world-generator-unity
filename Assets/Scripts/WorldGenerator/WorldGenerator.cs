@@ -11,13 +11,13 @@ public class WorldGenerator
     const int sphereLevels = 6;
 
     PolygonSphere[] spheres;
-    IHeightGenerator heightGenerator;
     Action<string> logger = s => Console.WriteLine(s);
     float[] sea_level_by_sphere;
 
-    HeightGeneratorType hGenType;
-    Noise.Settings heightPerlinSettings;
+    HeightGeneratorType height_generator_type;
+    Noise.Settings height_perlin_settings;
     float sea_percentage;
+    float ridge_density;
     int seed;
 
     public WorldGenerator(Action<string> logger)
@@ -36,40 +36,39 @@ public class WorldGenerator
         HeightGeneratorType heightGenType,
         Noise.Settings perlinSettings,
         float sea_percentage,
+        float ridge_density,
         int seed)
     {
         bool updated = false;
 
-        if (hGenType != heightGenType || heightGenerator == null || this.seed != seed)
+        if (this.seed != seed)
         {
-            this.seed = seed;
-            hGenType = heightGenType;
             updated = true;
-            heightPerlinSettings = heightPerlinSettings.ChangeSeed(seed);
-            if (heightGenType == HeightGeneratorType.Random)
-            {
-                heightGenerator = new HeightGenerator(seed);
-            }
-            else if (heightGenType == HeightGeneratorType.Perlin)
-            {
-                heightGenerator = new PerlinHeightGenerator(heightPerlinSettings);
-            }
+            this.seed = seed;
         }
 
-        if (!heightPerlinSettings.Equals(perlinSettings))
+        if (height_generator_type != heightGenType)
         {
-            heightPerlinSettings = perlinSettings.ChangeSeed(seed);
-            if (heightGenType == HeightGeneratorType.Perlin)
-            {
-                updated = true;
-                heightGenerator = new PerlinHeightGenerator(heightPerlinSettings);
-            }            
+            updated = true;
+            height_generator_type = heightGenType;
+        }
+
+        if (!height_perlin_settings.Equals(perlinSettings))
+        {
+            updated = updated || heightGenType == HeightGeneratorType.Perlin;
+            height_perlin_settings = perlinSettings;
         }
 
         if (this.sea_percentage != sea_percentage)
         {
             updated = true;
             this.sea_percentage = sea_percentage;
+        }
+
+        if (this.ridge_density != ridge_density)
+        {
+            updated = true;
+            this.ridge_density = ridge_density;
         }
 
         return updated;
@@ -82,13 +81,28 @@ public class WorldGenerator
         return get_height(sphere_level, polygon_index) < sea_level_by_sphere[sphere_level];
     }
 
+    public bool EdgeHasRidge(int sphere_level, int edge_index)
+    {
+        return get_ridge(sphere_level, edge_index) < ridge_density;
+    }
+
     public int SphereCount => spheres.Length;
 
     public void Regenerate()
     {
+        IHeightGenerator height_generator = null;
+        if (height_generator_type == HeightGeneratorType.Random)
+        {
+            height_generator = new HeightGenerator(seed);
+        }
+        else if (height_generator_type == HeightGeneratorType.Perlin)
+        {
+            height_generator = new PerlinHeightGenerator(height_perlin_settings);
+        }
+
         for (int i = 0; i < spheres.Length; i++)
         {
-            spheres[i].RegenerateData(heightGenerator);
+            spheres[i].RegenerateData(height_generator, seed);
             calculate_sea_level(i);
         }
     }
@@ -100,7 +114,7 @@ public class WorldGenerator
             Select(i => get_height(sphere_level, i)).
             ToList();
         sorted_heights.Sort();
-        int sea_level_index = (int)(sea_percentage * spheres[sphere_level].PolygonCount);
+        int sea_level_index = (int)(sea_percentage * (spheres[sphere_level].PolygonCount-1));
         sea_level_by_sphere[sphere_level] = sorted_heights[sea_level_index];
     }
 
@@ -144,5 +158,10 @@ public class WorldGenerator
     int get_region(int sphere_index, int polygon_index)
     {
         return spheres[sphere_index].GetPolygonData(polygon_index).region;
+    }
+
+    float get_ridge(int sphere_index, int edge_index)
+    {
+        return spheres[sphere_index].GetEdgeData(edge_index).ridge;
     }
 }
