@@ -275,9 +275,13 @@ public class HexGlobe : MonoBehaviour
     bool terrainBorder(int p1, int p2)
     {
         int dataLevel = getDataLevel;
-        PolygonData d1 = generator.GetSphere(dataLevel).GetPolygonData(generator.GetPolygonIndex(p1, sphereLevel, dataLevel));
-        PolygonData d2 = generator.GetSphere(dataLevel).GetPolygonData(generator.GetPolygonIndex(p2, sphereLevel, dataLevel));
-        return d1.height < seaLevel != d2.height < seaLevel;
+
+        int regionIndex1 = generator.GetPolygonIndex(p1, sphereLevel, dataLevel);
+        int regionIndex2 = generator.GetPolygonIndex(p2, sphereLevel, dataLevel);
+        bool t1 = generator.RegionIsSea(dataLevel, regionIndex1);
+        bool t2 = generator.RegionIsSea(dataLevel, regionIndex2);
+
+        return t1 != t2;
     }
 
     bool ridgeBorder(int p1, int p2)

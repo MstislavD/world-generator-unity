@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 
 public class WorldGenerator
 {
@@ -12,16 +13,19 @@ public class WorldGenerator
     PolygonSphere[] spheres;
     IHeightGenerator heightGenerator;
     Action<string> logger = s => Console.WriteLine(s);
+    float[] sea_level_by_sphere;
 
     HeightGeneratorType hGenType;
     Noise.Settings heightPerlinSettings;
-    float seaLevel;
+    float sea_percentage;
     int seed;
 
     public WorldGenerator(Action<string> logger)
     {
         this.logger = logger;
         spheres = new PolygonSphere[sphereLevels];
+        sea_level_by_sphere = new float[sphereLevels];
+
         for (int i = 0; i < sphereLevels; i++)
         {
             spheres[i] = new PolygonSphere((int)MathF.Pow(2, i) - 1);
@@ -31,7 +35,7 @@ public class WorldGenerator
     public bool UpdateSettings(
         HeightGeneratorType heightGenType,
         Noise.Settings perlinSettings,
-        float seaLevel,
+        float sea_percentage,
         int seed)
     {
         bool updated = false;
@@ -62,10 +66,10 @@ public class WorldGenerator
             }            
         }
 
-        if (this.seaLevel != seaLevel)
+        if (this.sea_percentage != sea_percentage)
         {
             updated = true;
-            this.seaLevel = seaLevel;
+            this.sea_percentage = sea_percentage;
         }
 
         return updated;
@@ -75,7 +79,7 @@ public class WorldGenerator
 
     public bool RegionIsSea(int sphereLevel, int polygonIndex)
     {
-        return spheres[sphereLevel].GetPolygonData(polygonIndex).height < seaLevel;
+        return spheres[sphereLevel].GetPolygonData(polygonIndex).height < sea_level_by_sphere[sphereLevel];
     }
 
     public int SphereCount => spheres.Length;
@@ -85,7 +89,19 @@ public class WorldGenerator
         for (int i = 0; i < spheres.Length; i++)
         {
             spheres[i].RegenerateData(heightGenerator);
+            calculate_sea_level(i);
         }
+    }
+
+    private void calculate_sea_level(int sphereLevel)
+    {
+        List<float> sorted_heights_by_sphere = 
+            Enumerable.Range(0, spheres[sphereLevel].PolygonCount).
+            Select(i => spheres[sphereLevel].GetPolygonData(i).height).
+            ToList();
+        sorted_heights_by_sphere.Sort();
+        int sea_level_index = (int)(sea_percentage * spheres[sphereLevel].PolygonCount);
+        sea_level_by_sphere[sphereLevel] = sorted_heights_by_sphere[sea_level_index];
     }
 
     public int GetPolygonIndex(int polygonIndex, int sphereLevel, int dataLevel)
