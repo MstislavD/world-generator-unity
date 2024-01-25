@@ -93,15 +93,15 @@ public class WorldGenerator
         }
     }
 
-    private void calculate_sea_level(int sphereLevel)
+    private void calculate_sea_level(int sphere_level)
     {
-        List<float> sorted_heights_by_sphere = 
-            Enumerable.Range(0, spheres[sphereLevel].PolygonCount).
-            Select(i => spheres[sphereLevel].GetPolygonData(i).height).
+        List<float> sorted_heights = 
+            Enumerable.Range(0, spheres[sphere_level].PolygonCount).
+            Select(i => spheres[sphere_level].GetPolygonData(i).height).
             ToList();
-        sorted_heights_by_sphere.Sort();
-        int sea_level_index = (int)(sea_percentage * spheres[sphereLevel].PolygonCount);
-        sea_level_by_sphere[sphereLevel] = sorted_heights_by_sphere[sea_level_index];
+        sorted_heights.Sort();
+        int sea_level_index = (int)(sea_percentage * spheres[sphere_level].PolygonCount);
+        sea_level_by_sphere[sphere_level] = sorted_heights[sea_level_index];
     }
 
     public int GetPolygonIndex(int polygonIndex, int sphereLevel, int dataLevel)
