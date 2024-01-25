@@ -128,10 +128,6 @@ public class HexGlobe : MonoBehaviour
                 initiateMeshing = smoothPolygons ? true : initiateMeshing;
             }            
         }
-        else
-        {
-            initiateMeshing = true;
-        }      
     }
 
     public void Regenerate()
