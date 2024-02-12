@@ -8,7 +8,7 @@ public class WorldGenerator
 {
     public enum HeightGeneratorType { Random, Perlin }
 
-    const int sphereLevels = 6;
+    //int sphereLevels = 6;
 
     PolygonSphere[] spheres;
     Action<string> logger = s => Console.WriteLine(s);
@@ -20,9 +20,10 @@ public class WorldGenerator
     float ridge_density;
     int seed;
 
-    public WorldGenerator(Action<string> logger)
+    public WorldGenerator(Action<string> logger, int sphereLevels)
     {
         this.logger = logger;
+        //this.sphereLevels = sphereLevels;
         spheres = new PolygonSphere[sphereLevels];
         sea_level_by_sphere = new float[sphereLevels];
 

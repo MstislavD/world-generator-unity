@@ -1,9 +1,14 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using UnityEngine;
 
 public class HexGlobe : MonoBehaviour
 {
+    static Action<string> logger = s => UnityEngine.Debug.Log(s);
+
     enum NormalType { Polyhedron, Sphere }
 
     public enum Coloring { Zones, Terrain, Random, White }
@@ -19,11 +24,17 @@ public class HexGlobe : MonoBehaviour
     int sphereLevel, dataLevel;
     MeshTopology meshTopology = MeshTopology.Triangles;
 
+    List<string> frame_log = new List<string>();
+    int frame_log_length = 0;
+
     [SerializeField]
     MeshFilter polygonMesh, edgeMesh;
 
     [SerializeField]
     MeshCollider sphereCollider;
+
+    [SerializeField, Range(5, 10)]
+    int sphereLevels;
 
     [SerializeField]
     bool debugSeed = false;
@@ -59,7 +70,7 @@ public class HexGlobe : MonoBehaviour
     {
         sphereLevel = 5;
         dataLevel = 5;
-        generator = new WorldGenerator(s => Debug.Log(s));
+        generator = new WorldGenerator(logger, sphereLevels);
         Regenerate();
     }
 
@@ -67,7 +78,7 @@ public class HexGlobe : MonoBehaviour
     {
         if (initiateMeshing)
         {
-            polygonMesh.mesh = generateSphereMesh();
+            polygonMesh.mesh = profiling(generateSphereMesh, "Mesh generation");
             sphereCollider.sharedMesh = polygonMesh.mesh;
             initiateMeshing = false;
             initiateRecoloring = true;
@@ -75,10 +86,10 @@ public class HexGlobe : MonoBehaviour
 
         if (initiateRecoloring)
         {
-            recolorMesh();
+            profiling(recolorMesh, "Mesh recoloring");
             edgeMesh.mesh = generateEdgeMesh(meshTopology);
             initiateRecoloring = false;
-            Debug.Log("Polygons: " + generator.GetSphere(sphereLevel).PolygonCount + ", Seed: " + seed + ", Data Level: " + dataLevel);
+            logger("Polygons: " + generator.GetSphere(sphereLevel).PolygonCount + ", Seed: " + seed + ", Data Level: " + dataLevel);
         }
 
         if (Input.GetMouseButtonDown(0))
@@ -91,7 +102,7 @@ public class HexGlobe : MonoBehaviour
                 int triagleIndex = hit.triangleIndex;
                 int polygonIndex = triagleIndex < 60 ? triagleIndex / 5 : (triagleIndex - 60) / 6 + 12;
 
-                Debug.Log(sphere.GetPolygonInfo(polygonIndex));
+                logger(sphere.GetPolygonInfo(polygonIndex));
 
                 modifiedColors = (Color[])defaultColors.Clone();
                 colorPolygonCenter(polygonIndex, modifiedColors, Color.black);
@@ -104,7 +115,9 @@ public class HexGlobe : MonoBehaviour
 
                 polygonMesh.mesh.colors = modifiedColors;
             }
-        }        
+        }
+
+        print_frame_log();
     }
 
     void colorPolygonCenter(int polygonIndex, Color[] colors, Color color)
@@ -124,7 +137,7 @@ public class HexGlobe : MonoBehaviour
 
     public void Regenerate()
     {       
-        seed = debugSeed ? seed : Random.Range(int.MinValue, int.MaxValue);
+        seed = debugSeed ? seed : UnityEngine.Random.Range(int.MinValue, int.MaxValue);
         update_generator();
         initiateMeshing = smoothPolygons ? true : initiateMeshing;
 
@@ -142,7 +155,7 @@ public class HexGlobe : MonoBehaviour
 
         if (updated)
         {
-            generator.Regenerate();
+            profiling(generator.Regenerate, "Data regenerated");
             initiateRecoloring = true;
         }
     }
@@ -346,5 +359,42 @@ public class HexGlobe : MonoBehaviour
         float sat = hash.Float01B * 0.5f + 0.5f;
         float val = hash.Float01C * 0.75f + 0.25f;
         return Color.HSVToRGB(hue, sat, val);
+    }
+
+    T profiling<T>(Func<T> function, string description)
+    {
+        System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        T result = function();
+        add_to_frame_log($"{description} complete in {stopwatch.ElapsedMilliseconds} ms");
+        return result;
+    }
+
+    void profiling(Action action, string description)
+    {
+        System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
+        action();
+        add_to_frame_log($"{description} complete in {stopwatch.ElapsedMilliseconds} ms");
+    }
+
+    void add_to_frame_log(string str)
+    {
+        frame_log_length += 1;
+        if (frame_log.Count < frame_log_length)
+        {
+            frame_log.Add(str);
+        }
+        else
+        {
+            frame_log[frame_log_length - 1] = str;
+        }
+    }
+
+    void print_frame_log()
+    {
+        if (frame_log_length != 0)
+        {
+            logger(frame_log.Take(frame_log_length).Aggregate((s1, s2) => s1 + ". " + s2));
+            frame_log_length = 0;
+        }       
     }
 }
