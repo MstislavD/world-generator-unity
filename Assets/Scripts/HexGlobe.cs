@@ -33,8 +33,8 @@ public class HexGlobe : MonoBehaviour
     [SerializeField]
     MeshCollider sphereCollider;
 
-    [SerializeField, Range(5, 10)]
-    int sphereLevels;
+    [SerializeField, Range(6, 10)]
+    int sphereLevels = 6;
 
     [SerializeField]
     bool debugSeed = false;
