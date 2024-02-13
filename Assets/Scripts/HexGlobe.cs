@@ -349,8 +349,6 @@ public class HexGlobe : MonoBehaviour
 
         defaultColors = colors.ToArray();
         polygonMesh.mesh.colors = modifiedColors = colors.ToArray();
-
-        //polygonMesh.mesh.SetColors(defaultColors);
     }
 
     int getDataLevel => Unity.Mathematics.math.min(dataLevel, sphereLevel);
