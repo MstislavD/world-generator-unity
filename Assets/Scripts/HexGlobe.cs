@@ -24,8 +24,7 @@ public class HexGlobe : MonoBehaviour
     int sphereLevel, dataLevel;
     MeshTopology meshTopology = MeshTopology.Triangles;
 
-    List<string> frame_log = new List<string>();
-    int frame_log_length = 0;
+    Profiler profiler;
 
     [SerializeField]
     MeshFilter polygonMesh, edgeMesh;
@@ -68,6 +67,7 @@ public class HexGlobe : MonoBehaviour
 
     private void Awake()
     {
+        profiler = new Profiler();
         sphereLevel = 5;
         dataLevel = 5;
         generator = new WorldGenerator(logger, sphereLevels);
@@ -78,7 +78,7 @@ public class HexGlobe : MonoBehaviour
     {
         if (initiateMeshing)
         {
-            polygonMesh.mesh = profiling(generateSphereMesh, "Mesh generation");
+            polygonMesh.mesh = profiler.Profile(generateSphereMesh, "Mesh generation");
             sphereCollider.sharedMesh = polygonMesh.mesh;
             initiateMeshing = false;
             initiateRecoloring = true;
@@ -86,7 +86,7 @@ public class HexGlobe : MonoBehaviour
 
         if (initiateRecoloring)
         {
-            profiling(recolorMesh, "Mesh recoloring");
+            profiler.Profile(recolorMesh, "Mesh recoloring");
             edgeMesh.mesh = generateEdgeMesh(meshTopology);
             initiateRecoloring = false;
             logger("Polygons: " + generator.GetSphere(sphereLevel).PolygonCount + ", Seed: " + seed + ", Data Level: " + dataLevel);
@@ -117,7 +117,7 @@ public class HexGlobe : MonoBehaviour
             }
         }
 
-        print_frame_log();
+        profiler.PrintLog(logger);
     }
 
     void colorPolygonCenter(int polygonIndex, Color[] colors, Color color)
@@ -155,7 +155,7 @@ public class HexGlobe : MonoBehaviour
 
         if (updated)
         {
-            profiling(generator.Regenerate, "Data regenerated");
+            profiler.Profile(generator.Regenerate, "Data regenerated");
             initiateRecoloring = true;
         }
     }
@@ -359,42 +359,5 @@ public class HexGlobe : MonoBehaviour
         float sat = hash.Float01B * 0.5f + 0.5f;
         float val = hash.Float01C * 0.75f + 0.25f;
         return Color.HSVToRGB(hue, sat, val);
-    }
-
-    T profiling<T>(Func<T> function, string description)
-    {
-        System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        T result = function();
-        add_to_frame_log($"{description} complete in {stopwatch.ElapsedMilliseconds} ms");
-        return result;
-    }
-
-    void profiling(Action action, string description)
-    {
-        System.Diagnostics.Stopwatch stopwatch = System.Diagnostics.Stopwatch.StartNew();
-        action();
-        add_to_frame_log($"{description} complete in {stopwatch.ElapsedMilliseconds} ms");
-    }
-
-    void add_to_frame_log(string str)
-    {
-        frame_log_length += 1;
-        if (frame_log.Count < frame_log_length)
-        {
-            frame_log.Add(str);
-        }
-        else
-        {
-            frame_log[frame_log_length - 1] = str;
-        }
-    }
-
-    void print_frame_log()
-    {
-        if (frame_log_length != 0)
-        {
-            logger(frame_log.Take(frame_log_length).Aggregate((s1, s2) => s1 + ". " + s2));
-            frame_log_length = 0;
-        }       
     }
 }
