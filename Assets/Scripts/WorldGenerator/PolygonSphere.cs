@@ -131,6 +131,8 @@ public class PolygonSphere
 
     public IEnumerable<Vector3> GetPolygonVertices(int polygonIndex) => polygons[polygonIndex].Vertices;
 
+    public Vector3 GetPolygonVertex(int polygonIndex, int position) => polygons[polygonIndex].GetVertex(position);
+
     public IEnumerable<VertexContext> GetPolygonVerticesContext(int index)
     {
         Polygon p = polygons[index];

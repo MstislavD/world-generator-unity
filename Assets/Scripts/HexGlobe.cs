@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using UnityEngine;
 
@@ -140,7 +139,6 @@ public class HexGlobe : MonoBehaviour
         seed = debugSeed ? seed : UnityEngine.Random.Range(int.MinValue, int.MaxValue);
         update_generator();
         initiateMeshing = smoothPolygons ? true : initiateMeshing;
-
     }
 
     void update_generator()
@@ -225,6 +223,8 @@ public class HexGlobe : MonoBehaviour
         mesh.vertices = vertices.ToArray();
         mesh.triangles = triangles.ToArray();
         mesh.normals = normals.ToArray();
+
+        //Mesh mesh = AdvancedMultiStreamProceduralMesh.GenerateMesh(sphere);
 
         return mesh;
     }

@@ -401,7 +401,7 @@ MonoBehaviour:
   polygonMesh: {fileID: 1968548735}
   edgeMesh: {fileID: 1556763577}
   sphereCollider: {fileID: 1968548733}
-  sphereLevels: 6
+  sphereLevels: 8
   debugSeed: 0
   seed: 0
   seaLevel: 0.7
