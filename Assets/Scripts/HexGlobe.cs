@@ -6,7 +6,7 @@ using UnityEngine;
 
 public class HexGlobe : MonoBehaviour
 {
-    static Action<string> logger = s => UnityEngine.Debug.Log(s);
+    static Action<string> logger = s => Debug.Log(s);
 
     enum NormalType { Polyhedron, Sphere }
 
@@ -70,6 +70,7 @@ public class HexGlobe : MonoBehaviour
         sphereLevel = 5;
         dataLevel = 5;
         generator = new WorldGenerator(logger, sphereLevels);
+        initiateMeshing = true;
         Regenerate();
     }
 
