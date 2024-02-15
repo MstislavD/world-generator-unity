@@ -6,7 +6,7 @@ using Unity.Mathematics;
 using static Unity.Mathematics.math;
 using System;
 
-public class AdvancedMultiStreamProceduralMesh
+public class SphereMeshGeneratorAdvancedAPI
 {
     public static Mesh GenerateMesh(PolygonSphere sphere)
     {
