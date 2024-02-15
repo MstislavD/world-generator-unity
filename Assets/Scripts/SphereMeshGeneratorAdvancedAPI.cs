@@ -3,12 +3,17 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using Unity.Mathematics;
 
-using static Unity.Mathematics.math;
-using System;
-
+public static class Delegates
+{
+    public delegate bool RegionBorderCheck(int index1, int index2);
+}
 public class SphereMeshGeneratorAdvancedAPI
 {
-    public static Mesh GenerateMesh(PolygonSphere sphere)
+    const float smoothingRatio = 0.25f;
+
+    
+
+    public static Mesh GenerateMesh(PolygonSphere sphere, Delegates.RegionBorderCheck borderCheck = null)
     {
         int vertexAttributeCount = 2;
         int vertexCount = (sphere.PolygonCount - 12) * 7 + 12 * 6;
@@ -29,13 +34,26 @@ public class SphereMeshGeneratorAdvancedAPI
 
         NativeArray<float3> positions = meshData.GetVertexData<float3>();
 
+
+
         for (int polygonIndex = 0, count = 0; polygonIndex < sphere.PolygonCount; polygonIndex++)
         {
             int sides = sphere.GetSides(polygonIndex);
             positions[count++] = sphere.GetCenter(polygonIndex);
-            for (int side = 0; side < sides; side++)
+
+            if (borderCheck == null)
             {
-                positions[count++] = sphere.GetPolygonVertex(polygonIndex, side);
+                for (int side = 0; side < sides; side++)
+                {
+                    positions[count++] = sphere.GetPolygonVertex(polygonIndex, side);
+                }
+            }             
+            else
+            {
+                foreach (VertexContext c in sphere.GetPolygonVerticesContext(polygonIndex))
+                {
+                    positions[count++] = getVectorFromContext(sphere, c, borderCheck);
+                }
             }
         }
 
@@ -63,7 +81,6 @@ public class SphereMeshGeneratorAdvancedAPI
                 triangleIndices[index_count++] = vertex_count;
                 triangleIndices[index_count++] = vertex_count + side + 1;
                 triangleIndices[index_count++] = vertex_count + (side + 1) % sides + 1;
-                //triangleIndices[index_count++] = vertex_count + (side + 1) % sides + 1;
             }
             vertex_count += sides + 1;
         }
@@ -76,5 +93,29 @@ public class SphereMeshGeneratorAdvancedAPI
         Mesh.ApplyAndDisposeWritableMeshData(meshDataArray, mesh);
 
         return mesh;
+    }
+
+    static Vector3 getVectorFromContext(PolygonSphere sphere, VertexContext context, Delegates.RegionBorderCheck borderCheck)
+    {
+        int p1 = context.Polygon1;
+        int p2 = context.Polygon2;
+        int p3 = context.Polygon3;
+
+        if (borderCheck(p1, p2) && borderCheck(p1, p3) && !borderCheck(p2, p3))
+        {
+            return Vector3.Lerp(context.Vertex, sphere.GetCenter(p1), smoothingRatio);
+        }
+        else if (!borderCheck(p1, p2) && borderCheck(p1, p3) && borderCheck(p2, p3))
+        {
+            return Vector3.Lerp(context.Vertex, sphere.GetCenter(p3), smoothingRatio);
+        }
+        else if (borderCheck(p1, p2) && !borderCheck(p1, p3) && borderCheck(p2, p3))
+        {
+            return Vector3.Lerp(context.Vertex, sphere.GetCenter(p2), smoothingRatio);
+        }
+        else
+        {
+            return context.Vertex;
+        }
     }
 }

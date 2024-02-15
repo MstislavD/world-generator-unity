@@ -26,6 +26,9 @@ public class HexGlobe : MonoBehaviour
     Profiler profiler;
 
     [SerializeField]
+    bool advanced_meshing = false;
+
+    [SerializeField]
     MeshFilter polygonMesh, edgeMesh;
 
     [SerializeField]
@@ -132,7 +135,8 @@ public class HexGlobe : MonoBehaviour
     private void OnValidate()
     {
         update_generator();
-        initiateMeshing = smoothPolygons ? true : initiateMeshing;
+        //initiateMeshing = smoothPolygons ? true : initiateMeshing;
+        initiateMeshing = true;
     }
 
     public void Regenerate()
@@ -199,10 +203,18 @@ public class HexGlobe : MonoBehaviour
     {
         PolygonSphere sphere = generator.GetSphere(sphereLevel);
 
-        SphereMeshGeneratorSmoothed.RegionBorderCheck smoothing =
+        Delegates.RegionBorderCheck smoothing =
             coloring == Coloring.Random ? regionBorder :
             coloring == Coloring.Terrain ? terrainOrRidgeBorder :
             zoneBorder;
+
+        if (advanced_meshing)
+        {
+           return smoothPolygons ?
+           SphereMeshGeneratorAdvancedAPI.GenerateMesh(sphere, smoothing) :
+           SphereMeshGeneratorAdvancedAPI.GenerateMesh(sphere);
+        }
+
         SphereMeshGenerator meshGenerator = smoothPolygons ?
             new SphereMeshGeneratorSmoothed(sphere, smoothing) : new SphereMeshGenerator(sphere);
 
@@ -225,8 +237,6 @@ public class HexGlobe : MonoBehaviour
         mesh.triangles = triangles.ToArray();
         mesh.normals = normals.ToArray();
 
-        //Mesh mesh = AdvancedMultiStreamProceduralMesh.GenerateMesh(sphere);
-
         return mesh;
     }
 
@@ -241,7 +251,7 @@ public class HexGlobe : MonoBehaviour
         List<int> indices = new List<int>();
         List<Color> colors = new List<Color>();
 
-        SphereMeshGeneratorSmoothed.RegionBorderCheck smoothing = coloring == Coloring.Random ? regionBorder : terrainOrRidgeBorder;
+        Delegates.RegionBorderCheck smoothing = coloring == Coloring.Random ? regionBorder : terrainOrRidgeBorder;
         SphereMeshGenerator meshGenerator = smoothPolygons ?
             new SphereMeshGeneratorSmoothed(sphere, smoothing) : new SphereMeshGenerator(sphere);
 

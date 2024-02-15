@@ -134,11 +134,9 @@ public class SphereMeshGeneratorSmoothed: SphereMeshGenerator
 {
     const float smoothingRatio = 0.25f;
 
-    public delegate bool RegionBorderCheck(int index1, int index2);
+    Delegates.RegionBorderCheck borderCheck;
 
-    RegionBorderCheck borderCheck;
-
-    public SphereMeshGeneratorSmoothed(PolygonSphere sphere, RegionBorderCheck borderCheck) : base(sphere)
+    public SphereMeshGeneratorSmoothed(PolygonSphere sphere, Delegates.RegionBorderCheck borderCheck) : base(sphere)
     {
         this.borderCheck = borderCheck;
     }
