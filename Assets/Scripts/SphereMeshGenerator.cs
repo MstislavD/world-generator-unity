@@ -6,9 +6,45 @@ using static Unity.Mathematics.math;
 
 public class SphereMeshGenerator
 {
+    public delegate bool RegionBorderCheck(int index1, int index2);
+
+    public enum NormalType { Polyhedron, Sphere }
+
     const float edgeRadius = 1.001f;
     float width;
     protected PolygonSphere sphere;
+
+    public static Mesh GenerateMesh(
+        PolygonSphere sphere, 
+        RegionBorderCheck border_check = null, 
+        NormalType normals_type = NormalType.Polyhedron
+        )
+    {
+        SphereMeshGenerator mesh_generator = border_check == null ?
+            new SphereMeshGenerator(sphere) :
+            new SphereMeshGeneratorSmoothed(sphere, border_check);
+
+        List<Vector3> vertices = new List<Vector3>();
+        List<int> triangles = new List<int>();
+        List<Vector3> normals = new List<Vector3>();
+
+        for (int i = 0; i < sphere.PolygonCount; i++)
+        {
+            triangles.AddRange(mesh_generator.GetPolygonTriangles(vertices.Count, sphere.GetSides(i)));
+            vertices.AddRange(mesh_generator.GetPolygonVertices(i));
+            normals.AddRange(normals_type == NormalType.Polyhedron ? mesh_generator.NormalsFlat(i) : mesh_generator.NormalsSphere(i));
+        }
+
+        UnityEngine.Rendering.IndexFormat indexFormat = sphere.PolygonCount < 3000 ?
+            UnityEngine.Rendering.IndexFormat.UInt16 : UnityEngine.Rendering.IndexFormat.UInt32;
+
+        Mesh mesh = new Mesh { name = "Pentagonal sphere ", indexFormat = indexFormat };
+        mesh.vertices = vertices.ToArray();
+        mesh.triangles = triangles.ToArray();
+        mesh.normals = normals.ToArray();
+
+        return mesh;
+    }
 
     public SphereMeshGenerator(PolygonSphere sphere)
     {
@@ -16,7 +52,7 @@ public class SphereMeshGenerator
         width = min(0.1f + sphere.BandSize * (0.4f / 31f), 0.5f);
     }
 
-    public Vector3[] GetPolygonVertices(int polygonIndex)
+    Vector3[] GetPolygonVertices(int polygonIndex)
     {
         int sides = sphere.GetSides(polygonIndex);
         Vector3[] vertices = new Vector3[sides + 1];
@@ -132,11 +168,11 @@ public class SphereMeshGenerator
 
 public class SphereMeshGeneratorSmoothed: SphereMeshGenerator
 {
-    const float smoothingRatio = 0.25f;
+    protected RegionBorderCheck borderCheck;
 
-    Delegates.RegionBorderCheck borderCheck;
+    protected const float smoothingRatio = 0.25f;
 
-    public SphereMeshGeneratorSmoothed(PolygonSphere sphere, Delegates.RegionBorderCheck borderCheck) : base(sphere)
+    public SphereMeshGeneratorSmoothed(PolygonSphere sphere, RegionBorderCheck borderCheck) : base(sphere)
     {
         this.borderCheck = borderCheck;
     }
@@ -161,12 +197,12 @@ public class SphereMeshGeneratorSmoothed: SphereMeshGenerator
         return getVectorFromContext(context);
     }
 
-    Vector3 getVectorFromContext(VertexContext context)
+    protected Vector3 getVectorFromContext(VertexContext context)
     {
         int p1 = context.Polygon1;
         int p2 = context.Polygon2;
         int p3 = context.Polygon3;
-        
+
         if (borderCheck(p1, p2) && borderCheck(p1, p3) && !borderCheck(p2, p3))
         {
             return Vector3.Lerp(context.Vertex, sphere.GetCenter(p1), smoothingRatio);

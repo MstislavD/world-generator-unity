@@ -8,8 +8,6 @@ public class HexGlobe : MonoBehaviour
 {
     static Action<string> logger = s => Debug.Log(s);
 
-    enum NormalType { Polyhedron, Sphere }
-
     public enum Coloring { Zones, Terrain, Random, White }
 
     static Color[] neighborColors = { Color.red, Color.white, Color.white, Color.cyan, Color.blue, Color.magenta };
@@ -50,7 +48,7 @@ public class HexGlobe : MonoBehaviour
     float ridgeDensity = 0.1f;
 
     [SerializeField]
-    NormalType normalsType = NormalType.Polyhedron;
+    SphereMeshGenerator.NormalType normalsType = SphereMeshGenerator.NormalType.Polyhedron;
 
     [SerializeField]
     Coloring coloring = Coloring.Zones;
@@ -203,41 +201,15 @@ public class HexGlobe : MonoBehaviour
     {
         PolygonSphere sphere = generator.GetSphere(sphereLevel);
 
-        Delegates.RegionBorderCheck smoothing =
+        SphereMeshGenerator.RegionBorderCheck smoothing =
             coloring == Coloring.Random ? regionBorder :
             coloring == Coloring.Terrain ? terrainOrRidgeBorder :
-            zoneBorder;
+            coloring == Coloring.Zones ? zoneBorder :
+            null;
 
-        if (advanced_meshing)
-        {
-           return smoothPolygons ?
-           SphereMeshGeneratorAdvancedAPI.GenerateMesh(sphere, smoothing) :
-           SphereMeshGeneratorAdvancedAPI.GenerateMesh(sphere);
-        }
-
-        SphereMeshGenerator meshGenerator = smoothPolygons ?
-            new SphereMeshGeneratorSmoothed(sphere, smoothing) : new SphereMeshGenerator(sphere);
-
-        List<Vector3> vertices = new List<Vector3>();
-        List<int> triangles = new List<int>();
-        List<Vector3> normals = new List<Vector3>();
-
-        for (int i = 0; i < sphere.PolygonCount; i++)
-        {
-            triangles.AddRange(meshGenerator.GetPolygonTriangles(vertices.Count, sphere.GetSides(i)));
-            vertices.AddRange(meshGenerator.GetPolygonVertices(i));
-            normals.AddRange(normalsType == NormalType.Polyhedron ? meshGenerator.NormalsFlat(i) : meshGenerator.NormalsSphere(i));
-        }
-
-        UnityEngine.Rendering.IndexFormat indexFormat = sphere.PolygonCount < 3000 ?
-            UnityEngine.Rendering.IndexFormat.UInt16 : UnityEngine.Rendering.IndexFormat.UInt32;
-
-        Mesh mesh = new Mesh { name = "Pentagonal sphere " + sphereLevel, indexFormat = indexFormat };
-        mesh.vertices = vertices.ToArray();
-        mesh.triangles = triangles.ToArray();
-        mesh.normals = normals.ToArray();
-
-        return mesh;
+        return advanced_meshing ?
+            SphereMeshGeneratorAdvancedAPI.GenerateMesh(sphere, smoothing) :
+            SphereMeshGenerator.GenerateMesh(sphere, smoothing);
     }
 
     Mesh generateEdgeMesh(MeshTopology topology)
@@ -251,7 +223,7 @@ public class HexGlobe : MonoBehaviour
         List<int> indices = new List<int>();
         List<Color> colors = new List<Color>();
 
-        Delegates.RegionBorderCheck smoothing = coloring == Coloring.Random ? regionBorder : terrainOrRidgeBorder;
+        SphereMeshGenerator.RegionBorderCheck smoothing = coloring == Coloring.Random ? regionBorder : terrainOrRidgeBorder;
         SphereMeshGenerator meshGenerator = smoothPolygons ?
             new SphereMeshGeneratorSmoothed(sphere, smoothing) : new SphereMeshGenerator(sphere);
 
