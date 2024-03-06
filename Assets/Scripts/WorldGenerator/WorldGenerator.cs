@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Xml.Serialization;
+using UnityEngine.Experimental.AI;
 
 public class WorldGenerator
 {
@@ -14,6 +16,7 @@ public class WorldGenerator
     Action<string> logger = s => Console.WriteLine(s);
     float[] sea_level_by_sphere;
     PolygonData[][] polygon_data;
+    EdgeData[][] edge_data;
 
     HeightGeneratorType height_generator_type;
     Noise.Settings height_perlin_settings;
@@ -28,11 +31,13 @@ public class WorldGenerator
         spheres = new PolygonSphere[sphereLevels];
         sea_level_by_sphere = new float[sphereLevels];
         polygon_data = new PolygonData[sphereLevels][];
+        edge_data = new EdgeData[sphereLevels][];
 
         for (int i = 0; i < sphereLevels; i++)
         {
             spheres[i] = new PolygonSphere((int)MathF.Pow(2, i) - 1);
             polygon_data[i] = new PolygonData[spheres[i].PolygonCount];
+            edge_data[i] = new EdgeData[spheres[i].EdgeCount];
         }
     }
 
@@ -106,7 +111,7 @@ public class WorldGenerator
 
         for (int i = 0; i < spheres.Length; i++)
         {
-            spheres[i].RegenerateData(height_generator, seed);
+            regenerate_data(i, height_generator, seed);
             calculate_sea_level(i);
         }
     }
@@ -156,16 +161,51 @@ public class WorldGenerator
 
     float get_height(int sphere_index, int polygon_index)
     {
-        return spheres[sphere_index].GetPolygonData(polygon_index).height;
+        return polygon_data[sphere_index][polygon_index].height;
     }
 
     int get_region(int sphere_index, int polygon_index)
     {
-        return spheres[sphere_index].GetPolygonData(polygon_index).region;
+        return polygon_data[sphere_index][polygon_index].region;
     }
 
     float get_ridge(int sphere_index, int edge_index)
     {
-        return spheres[sphere_index].GetEdgeData(edge_index).ridge;
+        return edge_data[sphere_index][edge_index].ridge;
+    }
+
+    void regenerate_data(int sphereIndex, IHeightGenerator height_generator, int seed)
+    {
+        PolygonSphere sphere = spheres[sphereIndex];
+        for (int i = 0; i < sphere.PolygonCount; i++)
+        {
+            polygon_data[sphereIndex][i] = generatePolygonData(sphere, i, height_generator , seed);
+        }
+
+        for (int i = 0; i < sphere.EdgeCount; i++)
+        {
+            edge_data[sphereIndex][i] = generateEdgeData(height_generator);
+        }
+    }
+
+    PolygonData generatePolygonData(PolygonSphere sphere, int polygonIndex, IHeightGenerator heightGenerator, int seed)
+    {
+        SmallXXHash hash = new SmallXXHash((uint)seed);
+        PolygonData data = new PolygonData();
+        data.height = heightGenerator.GenerateHeight(sphere.GetCenter(polygonIndex));
+
+        int parent = sphere.GetParent(polygonIndex);
+        IEnumerable<int> nParents = sphere.GetNeighbors(polygonIndex).Select(sphere.GetParent).Where(pi => pi > -1);
+        data.region = parent > -1 ? 
+            parent : 
+            nParents.ToArray()[hash.Eat(polygonIndex).Float01B < 0.5f ? 0 : 1];
+
+        return data;
+    }
+
+    EdgeData generateEdgeData(IHeightGenerator heightGenerator)
+    {
+        EdgeData data = new EdgeData { ridge = heightGenerator.GenerateRidge() };
+        return data;
     }
 }

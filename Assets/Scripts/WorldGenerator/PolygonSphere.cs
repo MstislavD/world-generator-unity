@@ -24,8 +24,6 @@ public class PolygonSphere
 
     List<Polygon> polygons;
     List<Edge> edges;
-    PolygonData[] polygonData;
-    EdgeData[] edgeData;
 
     public int BandSize { get; }
 
@@ -37,13 +35,7 @@ public class PolygonSphere
 
         generatePolygons();
         generateEdges();
-        polygonData = new PolygonData[polygons.Count];
-        edgeData = new EdgeData[edges.Count];
     }
-
-    public PolygonData GetPolygonData(int index) => polygonData[index];
-
-    public EdgeData GetEdgeData(int index) => edgeData[index];
 
     public int GetEdge(int p1, int p2)
     {
@@ -76,6 +68,8 @@ public class PolygonSphere
     public int GetSides(int polygonIndex) => polygons[polygonIndex].Sides;
 
     public Vector3 GetCenter(int polygonIndex) => polygons[polygonIndex].Center;
+
+    public int GetParent(int polygonIndex) => polygons[polygonIndex].Parent;
 
     public int GetEdgePolygon1(int edgeIndex) => edges[edgeIndex].Polygon1;
 
@@ -190,19 +184,6 @@ public class PolygonSphere
             };
 
             return context;
-        }
-    }
-
-    public void RegenerateData(IHeightGenerator heightGenerator, int seed)
-    {
-        for (int i = 0; i < polygons.Count; i++)
-        {
-            polygonData[i] = generatePolygonData(i, heightGenerator, seed);
-        }
-
-        for (int i = 0; i < edges.Count; i++)
-        {
-            edgeData[i] = generateEdgeData(heightGenerator);
         }
     }
 
@@ -618,39 +599,5 @@ public class PolygonSphere
         float b = 0.5f / sin(PI * 36f / 180f);
         float reduction = (b + step) / (b + BandSize);
         return reduction;
-    }
-
-    PolygonData generatePolygonData(int polygonIndex, IHeightGenerator heightGenerator, int seed)
-    {
-        SmallXXHash hash = new SmallXXHash((uint)seed);
-        PolygonData data = new PolygonData();
-        data.height = heightGenerator.GenerateHeight(polygons[polygonIndex].Center);
-        Polygon polygon = polygons[polygonIndex];
-
-        if (polygon.Parent > -1)
-        {
-            data.region = polygon.Parent;
-        }
-        else
-        {
-            int[] neighborParents = new int[2];
-            for (int direction = 0, n = 0; direction < polygon.Sides; direction++)
-            {
-                Polygon neighbor = polygons[getNeighbor(polygonIndex, direction)];
-                if (neighbor.Parent > -1)
-                {
-                    neighborParents[n++] = neighbor.Parent;
-                }
-            }
-            data.region = neighborParents[hash.Eat(polygonIndex).Float01B < 0.5f ? 0 : 1];
-        }
-
-        return data;
-    }
-
-    EdgeData generateEdgeData(IHeightGenerator heightGenerator)
-    {
-        EdgeData data = new EdgeData { ridge = heightGenerator.GenerateRidge() };
-        return data;
     }
 }
