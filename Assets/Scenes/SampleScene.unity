@@ -398,7 +398,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f672974085562e94bbbb064e9e6e502f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  advanced_meshing: 1
+  advanced_meshing: 0
   polygonMesh: {fileID: 1968548735}
   edgeMesh: {fileID: 1556763577}
   sphereCollider: {fileID: 1968548733}
@@ -411,7 +411,7 @@ MonoBehaviour:
   coloring: 1
   smoothPolygons: 1
   smoothEdges: 1
-  heightGeneratorType: 1
+  heightGeneratorType: 0
   heightPerlinSettings:
     seed: 0
     frequency: 1
