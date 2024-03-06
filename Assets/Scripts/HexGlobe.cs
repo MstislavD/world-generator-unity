@@ -69,7 +69,7 @@ public class HexGlobe : MonoBehaviour
     {
         profiler = new Profiler();
         sphereLevel = 5;
-        dataLevel = 5;
+        dataLevel = 1;
         generator = new WorldGenerator(logger, sphereLevels);
         initiateMeshing = true;
         Regenerate();

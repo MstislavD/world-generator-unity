@@ -13,6 +13,7 @@ public class WorldGenerator
     PolygonSphere[] spheres;
     Action<string> logger = s => Console.WriteLine(s);
     float[] sea_level_by_sphere;
+    PolygonData[][] polygon_data;
 
     HeightGeneratorType height_generator_type;
     Noise.Settings height_perlin_settings;
@@ -26,10 +27,12 @@ public class WorldGenerator
         //this.sphereLevels = sphereLevels;
         spheres = new PolygonSphere[sphereLevels];
         sea_level_by_sphere = new float[sphereLevels];
+        polygon_data = new PolygonData[sphereLevels][];
 
         for (int i = 0; i < sphereLevels; i++)
         {
             spheres[i] = new PolygonSphere((int)MathF.Pow(2, i) - 1);
+            polygon_data[i] = new PolygonData[spheres[i].PolygonCount];
         }
     }
 
