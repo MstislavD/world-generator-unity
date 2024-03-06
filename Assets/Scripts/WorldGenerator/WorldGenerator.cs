@@ -1,10 +1,6 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Xml.Serialization;
-using UnityEngine.Experimental.AI;
 
 public class PolygonSphereTopology: ITopology
 {
@@ -191,13 +187,13 @@ public class WorldGenerator
 
     void generate_regions(int layer_index)
     {
-        PolygonSphere sphere = spheres[layer_index];
+        PolygonSphere layer = spheres[layer_index];
         SmallXXHash hash = new SmallXXHash((uint)seed);
 
-        for (int i = 0; i < sphere.PolygonCount; i++)
+        for (int i = 0; i < layer.PolygonCount; i++)
         {
-            int parent = sphere.GetParent(i);
-            IEnumerable<int> nParents = sphere.GetNeighbors(i).Select(sphere.GetParent).Where(pi => pi > -1);
+            int parent = layer.GetParent(i);
+            IEnumerable<int> nParents = layer.GetNeighbors(i).Select(layer.GetParent).Where(pi => pi > -1);
             polygon_data[layer_index][i].region = parent > -1 ?
                 parent :
                 nParents.ToArray()[hash.Eat(i).Float01B < 0.5f ? 0 : 1];
