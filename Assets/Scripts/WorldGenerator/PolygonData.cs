@@ -3,8 +3,9 @@ using System.Collections.Generic;
 
 public struct PolygonData
 {
-    public float height;
+    //public float height;
     public int region;
+    public Terrain terrain;
 }
 
 public struct EdgeData

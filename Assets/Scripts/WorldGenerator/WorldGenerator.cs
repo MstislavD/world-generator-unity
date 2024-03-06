@@ -6,6 +6,22 @@ using System.Linq;
 using System.Xml.Serialization;
 using UnityEngine.Experimental.AI;
 
+public class PolygonSphereTopology: ITopology
+{
+    PolygonSphere sphere;
+
+    public PolygonSphereTopology(PolygonSphere sphere)
+    {
+        this.sphere = sphere;
+    }
+
+    public int EdgeCount() => sphere.EdgeCount;
+
+    public UnityEngine.Vector3 GetCenter(int polygon_index) => sphere.GetCenter(polygon_index);
+
+    public int PolygonCount() => sphere.PolygonCount;
+}
+
 public class WorldGenerator
 {
     public enum HeightGeneratorType { Random, Perlin }
@@ -14,7 +30,7 @@ public class WorldGenerator
 
     PolygonSphere[] spheres;
     Action<string> logger = s => Console.WriteLine(s);
-    float[] sea_level_by_sphere;
+
     PolygonData[][] polygon_data;
     EdgeData[][] edge_data;
 
@@ -29,7 +45,6 @@ public class WorldGenerator
         this.logger = logger;
         //this.sphereLevels = sphereLevels;
         spheres = new PolygonSphere[sphereLevels];
-        sea_level_by_sphere = new float[sphereLevels];
         polygon_data = new PolygonData[sphereLevels][];
         edge_data = new EdgeData[sphereLevels][];
 
@@ -87,7 +102,7 @@ public class WorldGenerator
 
     public bool RegionIsSea(int sphere_level, int polygon_index)
     {
-        return get_height(sphere_level, polygon_index) < sea_level_by_sphere[sphere_level];
+        return polygon_data[sphere_level][polygon_index].terrain == Terrain.Sea;
     }
 
     public bool EdgeHasRidge(int sphere_level, int edge_index)
@@ -99,32 +114,10 @@ public class WorldGenerator
 
     public void Regenerate()
     {
-        IHeightGenerator height_generator = null;
-        if (height_generator_type == HeightGeneratorType.Random)
+        for (int layer_index = 0; layer_index < spheres.Length; layer_index++)
         {
-            height_generator = new HeightGenerator(seed);
+            regenerate_data(layer_index);
         }
-        else if (height_generator_type == HeightGeneratorType.Perlin)
-        {
-            height_generator = new PerlinHeightGenerator(height_perlin_settings);
-        }
-
-        for (int i = 0; i < spheres.Length; i++)
-        {
-            regenerate_data(i, height_generator, seed);
-            calculate_sea_level(i);
-        }
-    }
-
-    private void calculate_sea_level(int sphere_level)
-    {
-        List<float> sorted_heights = 
-            Enumerable.Range(0, spheres[sphere_level].PolygonCount).
-            Select(i => get_height(sphere_level, i)).
-            ToList();
-        sorted_heights.Sort();
-        int sea_level_index = (int)(sea_percentage * (spheres[sphere_level].PolygonCount-1));
-        sea_level_by_sphere[sphere_level] = sorted_heights[sea_level_index];
     }
 
     public int GetPolygonIndex(int polygonIndex, int sphereLevel, int dataLevel)
@@ -145,6 +138,16 @@ public class WorldGenerator
         return edgeIndex;
     }
 
+    public void SetTerrain(int layer_index, int polygon_index, Terrain terrain)
+    {
+        polygon_data[layer_index][polygon_index].terrain = terrain;
+    }
+
+    public void SetRidge(int layer_index, int edge_index, float ridge)
+    {
+        edge_data[layer_index][edge_index].ridge = ridge;
+    }
+
     int getRegionEdgeIndex(int edgeIndex, int sphere_level)
     {
         PolygonSphere sphere = spheres[sphere_level];
@@ -159,11 +162,6 @@ public class WorldGenerator
         return -1;
     }
 
-    float get_height(int sphere_index, int polygon_index)
-    {
-        return polygon_data[sphere_index][polygon_index].height;
-    }
-
     int get_region(int sphere_index, int polygon_index)
     {
         return polygon_data[sphere_index][polygon_index].region;
@@ -174,38 +172,35 @@ public class WorldGenerator
         return edge_data[sphere_index][edge_index].ridge;
     }
 
-    void regenerate_data(int sphereIndex, IHeightGenerator height_generator, int seed)
+    void regenerate_data(int layer_index)
     {
-        PolygonSphere sphere = spheres[sphereIndex];
+        generate_regions(layer_index);
+
+        ITopology topology = new PolygonSphereTopology(spheres[layer_index]);
+        if (height_generator_type == HeightGeneratorType.Random)
+        {
+            TerrainGenerator.GenerateRandomTerrain(this, topology, layer_index, sea_percentage, seed);
+        }
+        else if (height_generator_type == HeightGeneratorType.Perlin)
+        {
+            TerrainGenerator.GeneratePerlinTerrain(this, topology, height_perlin_settings, layer_index, sea_percentage);
+        }
+
+        TerrainGenerator.GenerateRandomRidges(this, topology, layer_index, seed + 1);
+    }
+
+    void generate_regions(int layer_index)
+    {
+        PolygonSphere sphere = spheres[layer_index];
+        SmallXXHash hash = new SmallXXHash((uint)seed);
+
         for (int i = 0; i < sphere.PolygonCount; i++)
         {
-            polygon_data[sphereIndex][i] = generatePolygonData(sphere, i, height_generator , seed);
+            int parent = sphere.GetParent(i);
+            IEnumerable<int> nParents = sphere.GetNeighbors(i).Select(sphere.GetParent).Where(pi => pi > -1);
+            polygon_data[layer_index][i].region = parent > -1 ?
+                parent :
+                nParents.ToArray()[hash.Eat(i).Float01B < 0.5f ? 0 : 1];
         }
-
-        for (int i = 0; i < sphere.EdgeCount; i++)
-        {
-            edge_data[sphereIndex][i] = generateEdgeData(height_generator);
-        }
-    }
-
-    PolygonData generatePolygonData(PolygonSphere sphere, int polygonIndex, IHeightGenerator heightGenerator, int seed)
-    {
-        SmallXXHash hash = new SmallXXHash((uint)seed);
-        PolygonData data = new PolygonData();
-        data.height = heightGenerator.GenerateHeight(sphere.GetCenter(polygonIndex));
-
-        int parent = sphere.GetParent(polygonIndex);
-        IEnumerable<int> nParents = sphere.GetNeighbors(polygonIndex).Select(sphere.GetParent).Where(pi => pi > -1);
-        data.region = parent > -1 ? 
-            parent : 
-            nParents.ToArray()[hash.Eat(polygonIndex).Float01B < 0.5f ? 0 : 1];
-
-        return data;
-    }
-
-    EdgeData generateEdgeData(IHeightGenerator heightGenerator)
-    {
-        EdgeData data = new EdgeData { ridge = heightGenerator.GenerateRidge() };
-        return data;
     }
 }
