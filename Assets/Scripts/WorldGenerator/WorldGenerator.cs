@@ -86,10 +86,7 @@ public class WorldGenerator<TTopology> : IWorldDataSetter
         return polygon_data[level][polygon_index].terrain == Terrain.Sea;
     }
 
-    public bool EdgeHasRidge(int level, int edge_index)
-    {
-        return get_ridge(level, edge_index) < ridge_density;
-    }
+    public bool EdgeHasRidge(int level, int edge_index) => edge_data[level][edge_index].ridge;
 
     public int LevelCount => layers.Length;
 
@@ -124,7 +121,7 @@ public class WorldGenerator<TTopology> : IWorldDataSetter
         polygon_data[layer_index][polygon_index].terrain = terrain;
     }
 
-    public void SetRidge(int layer_index, int edge_index, float ridge)
+    public void SetRidge(int layer_index, int edge_index, bool ridge)
     {
         edge_data[layer_index][edge_index].ridge = ridge;
     }
@@ -148,11 +145,6 @@ public class WorldGenerator<TTopology> : IWorldDataSetter
         return polygon_data[level][polygon_index].region;
     }
 
-    float get_ridge(int level, int edge_index)
-    {
-        return edge_data[level][edge_index].ridge;
-    }
-
     void regenerate_data(int level)
     {
         generate_regions(level);
@@ -167,7 +159,7 @@ public class WorldGenerator<TTopology> : IWorldDataSetter
             TerrainGenerator.GeneratePerlinTerrain(this, topology, height_perlin_settings, level, sea_percentage);
         }
 
-        TerrainGenerator.GenerateRandomRidges(this, topology, level, seed + 1);
+        TerrainGenerator.GenerateRandomRidges(this, topology, level, ridge_density, seed + 1);
     }
 
     void generate_regions(int level)

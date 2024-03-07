@@ -9,12 +9,17 @@ public interface IWorldDataSetter
 {
     void SetTerrain(int layer_index, int polygon_index,  Terrain terrain);
 
-    void SetRidge(int layer_index, int polygon_index, float value);
+    void SetRidge(int layer_index, int polygon_index, bool value);
 }
 
 public class TerrainGenerator
 {
-    public static void GenerateRandomTerrain(IWorldDataSetter generator, ITopology topolgy, int layer_index, float sea_level, int seed)
+    public static void GenerateRandomTerrain(
+        IWorldDataSetter generator,
+        ITopology topolgy,
+        int layer_index,
+        float sea_level,
+        int seed)
     {
         int[] regions = topolgy.GetPolygons().ToArray();
         int region_num = regions.Length;
@@ -74,13 +79,31 @@ public class TerrainGenerator
         }
     }
 
-    public static void GenerateRandomRidges(IWorldDataSetter generator, ITopology topolgy, int layer_index, int seed)
+    public static void GenerateRandomRidges(
+        IWorldDataSetter generator,
+        ITopology topolgy,
+        int layer_index,
+        float ridge_density,
+        int seed)
     {
+        int[] edges = topolgy.GetEdges().ToArray();
+        int edges_num = edges.Length;
+        int non_ridges_num = (int)(edges_num * (1 - ridge_density));
         SmallXXHash hash = new SmallXXHash((uint)seed);
-        for (int i = 0; i < topolgy.EdgeCount; i++)
+
+        while (non_ridges_num < edges_num)
         {
-            hash = hash.Eat(1);
-            generator.SetRidge(layer_index, i, hash.Float01A);
+            int index = (int)(hash.Float01A * edges_num);
+            generator.SetRidge(layer_index, edges[index], true);
+            edges_num -= 1;
+            edges[index] = edges[edges_num];
+            hash = hash.Eat(1);            
+        }
+
+        while (edges_num > 0)
+        {
+            edges_num -= 1;
+            generator.SetRidge(layer_index, edges[edges_num], false);
         }
     }
 }

@@ -10,5 +10,5 @@ public struct PolygonData
 
 public struct EdgeData
 {
-    public float ridge;
+    public bool ridge;
 }
