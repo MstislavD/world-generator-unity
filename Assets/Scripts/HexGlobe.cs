@@ -3,8 +3,14 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using static UnityEngine.Rendering.DebugUI.Table;
 
-public class HexGlobe : MonoBehaviour
+public class PolygonSphereTopology : PolygonSphere, ITopology
+{
+    public PolygonSphereTopology(int band_size) : base(band_size) { }
+}
+
+public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
 {
     static Action<string> logger = s => Debug.Log(s);
 
@@ -17,7 +23,7 @@ public class HexGlobe : MonoBehaviour
     bool initiateMeshing = false;
     bool initiateRecoloring = false;
     Color[] defaultColors, modifiedColors;
-    WorldGenerator generator;
+    WorldGenerator<PolygonSphereTopology> generator;
     int sphereLevel, dataLevel;
     MeshTopology meshTopology = MeshTopology.Triangles;
 
@@ -60,7 +66,7 @@ public class HexGlobe : MonoBehaviour
     bool smoothEdges = true;
 
     [SerializeField]
-    WorldGenerator.HeightGeneratorType heightGeneratorType = WorldGenerator.HeightGeneratorType.Random;
+    WorldGenerator<PolygonSphereTopology>.HeightGeneratorType heightGeneratorType = WorldGenerator<PolygonSphereTopology>.HeightGeneratorType.Random;
 
     [SerializeField]
     Noise.Settings heightPerlinSettings = Noise.Settings.Default;
@@ -70,7 +76,7 @@ public class HexGlobe : MonoBehaviour
         profiler = new Profiler();
         sphereLevel = 5;
         dataLevel = 1;
-        generator = new WorldGenerator(logger, sphereLevels);
+        generator = new WorldGenerator<PolygonSphereTopology>(this, sphereLevels, logger);
         initiateMeshing = true;
         Regenerate();
     }
@@ -163,7 +169,7 @@ public class HexGlobe : MonoBehaviour
 
     public void ChangeSphereLevel(int level)
     {
-        if (level != sphereLevel && level < generator.SphereCount)
+        if (level != sphereLevel && level < generator.LevelCount)
         {
             sphereLevel = level;
             initiateMeshing = true;
@@ -173,7 +179,7 @@ public class HexGlobe : MonoBehaviour
     public void ChangeDataLevel(int step)
     {
         int newLevel = dataLevel + step;
-        if (newLevel > -1 && newLevel < generator.SphereCount)
+        if (newLevel > -1 && newLevel < generator.LevelCount)
         {
             dataLevel = newLevel;
             initiateRecoloring = true;
@@ -343,4 +349,6 @@ public class HexGlobe : MonoBehaviour
         float val = hash.Float01C * 0.75f + 0.25f;
         return Color.HSVToRGB(hue, sat, val);
     }
+
+    public PolygonSphereTopology Create(int level) => new PolygonSphereTopology(PolygonSphere.BandSizeFromLevel(level));
 }

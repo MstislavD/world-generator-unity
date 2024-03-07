@@ -3,24 +3,18 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-public interface ITopology
-{
-    int PolygonCount();
-
-    int EdgeCount();
-
-    IEnumerable<int> GetPolygons() => Enumerable.Range(0, PolygonCount());
-
-    IEnumerable<int> GetEdges() => Enumerable.Range(0, EdgeCount());
-
-    Vector3 GetCenter(int polygon_index);
-}
-
 public enum Terrain { Sea, Land }
+
+public interface IWorldDataSetter
+{
+    void SetTerrain(int layer_index, int polygon_index,  Terrain terrain);
+
+    void SetRidge(int layer_index, int polygon_index, float value);
+}
 
 public class TerrainGenerator
 {
-    public static void GenerateRandomTerrain(WorldGenerator generator, ITopology topolgy, int layer_index, float sea_level, int seed)
+    public static void GenerateRandomTerrain(IWorldDataSetter generator, ITopology topolgy, int layer_index, float sea_level, int seed)
     {
         int[] regions = topolgy.GetPolygons().ToArray();
         int region_num = regions.Length;
@@ -44,15 +38,15 @@ public class TerrainGenerator
     }
 
     public static void GeneratePerlinTerrain(
-        WorldGenerator generator,
+        IWorldDataSetter generator,
         ITopology topolgy,
         Noise.Settings settings,
         int layer_index,
         float sea_percentage)
     {
         bool simplex = false;
-        int polygon_num = topolgy.PolygonCount();
-        float[] height = new float[topolgy.PolygonCount()];
+        int polygon_num = topolgy.PolygonCount;
+        float[] height = new float[topolgy.PolygonCount];
 
         for (int i = 0; i < polygon_num; i++)
         {
@@ -80,10 +74,10 @@ public class TerrainGenerator
         }
     }
 
-    public static void GenerateRandomRidges(WorldGenerator generator, ITopology topolgy, int layer_index, int seed)
+    public static void GenerateRandomRidges(IWorldDataSetter generator, ITopology topolgy, int layer_index, int seed)
     {
         SmallXXHash hash = new SmallXXHash((uint)seed);
-        for (int i = 0; i < topolgy.EdgeCount(); i++)
+        for (int i = 0; i < topolgy.EdgeCount; i++)
         {
             hash = hash.Eat(1);
             generator.SetRidge(layer_index, i, hash.Float01A);

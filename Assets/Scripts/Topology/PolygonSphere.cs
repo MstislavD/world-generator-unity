@@ -4,6 +4,7 @@ using UnityEngine;
 using Unity.Mathematics;
 
 using static Unity.Mathematics.math;
+using System;
 
 public struct VertexContext
 {
@@ -15,6 +16,8 @@ public struct VertexContext
 
 public class PolygonSphere
 {
+    public static int BandSizeFromLevel(int level) => (int)MathF.Pow(2, level) - 1;
+
     public enum PolygonType { Pole, Band, Zone }
 
     public enum Direction { Clockwise, Counterclockwise }
