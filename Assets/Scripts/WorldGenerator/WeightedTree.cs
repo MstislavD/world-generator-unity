@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting.Antlr3.Runtime.Tree;
+using UnityEditor;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
 
@@ -62,20 +64,25 @@ public class WeightedTree<T>
         {
             if (position > subtree_weight)
             {
-                throw new Exception($"Position {position} is greater than subtree weight {subtree_weight}");
+                throw new Exception("Position cannot be greater than subtree weight.");
             }
             float lw = left == null ? 0 : left.subtree_weight;
             if (position < lw)
             {
                 return left.find_node_by_position(position);
             }
-            else if (position - lw < weight)
+            else if (position - lw < weight || right == null)
             {
                 return this;
             }
             else
             {
-                return right.find_node_by_position(position - lw - weight);
+                position = position - lw - weight;
+                if (position > right.subtree_weight)
+                {
+                    position = right.subtree_weight;
+                }
+                return right.find_node_by_position(position);
             }
         }
 
@@ -93,7 +100,7 @@ public class WeightedTree<T>
             Node removed_node = this;
             if (left != null && right != null)
             {
-                removed_node = left.subtree_weight < right.subtree_weight ? left.remove_r() : right.remove_r();
+                removed_node = left.subtree_weight > right.subtree_weight ? left.remove_r() : right.remove_r();
             }
             else if (left != null)
             {
@@ -142,6 +149,14 @@ public class WeightedTree<T>
                 node_by_value[value] = root.add_node(value, weight);
             }
            
+        }
+    }
+
+    public void AddMany(IEnumerable<T> items, float weight)
+    {
+        foreach (T item in items)
+        {
+            Add(item, weight);
         }
     }
 

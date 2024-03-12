@@ -9,7 +9,12 @@ public interface IWorldDataSetter
 {
     void SetTerrain(int layer_index, int polygon_index,  Terrain terrain);
 
-    void SetRidge(int layer_index, int polygon_index, bool value);
+    void SetRidge(int layer_index, int edge_index, bool value);
+}
+
+public interface IWorldData
+{
+    bool RegionIsLand(int layer, int polygon_index);
 }
 
 public class TerrainGenerator
@@ -29,6 +34,10 @@ public class TerrainGenerator
         while (region_num > sea_region_num)
         {            
             int index = (int)(hash.Float01A * region_num);
+            if (index >= region_num)
+            {
+                index = region_num - 1;
+            }
             generator.SetTerrain(layer_index, regions[index], Terrain.Land);
             region_num -= 1;
             hash = hash.Eat(1);
@@ -80,30 +89,47 @@ public class TerrainGenerator
     }
 
     public static void GenerateRandomRidges(
-        IWorldDataSetter generator,
+        IWorldData world_data,
+        IWorldDataSetter world_data_setter,
         ITopology topolgy,
-        int layer_index,
+        int layer,
         float ridge_density,
         int seed)
     {
-        int[] edges = topolgy.GetEdges().ToArray();
-        int edges_num = edges.Length;
-        int non_ridges_num = (int)(edges_num * (1 - ridge_density));
         SmallXXHash hash = new SmallXXHash((uint)seed);
 
-        while (non_ridges_num < edges_num)
+        List<int> land_land_edges = new List<int>();
+        List<int> land_sea_edges = new List<int>();
+        WeightedTree<int> tree = new WeightedTree<int>();
+
+        foreach (int edge in topolgy.GetEdges())
         {
-            int index = (int)(hash.Float01A * edges_num);
-            generator.SetRidge(layer_index, edges[index], true);
-            edges_num -= 1;
-            edges[index] = edges[edges_num];
-            hash = hash.Eat(1);            
+            world_data_setter.SetRidge(layer, edge, false);
+            int p1 = topolgy.GetEdgePolygon1(edge);
+            int p2 = topolgy.GetEdgePolygon2(edge);
+            bool l1 = world_data.RegionIsLand(layer, p1);
+            bool l2 = world_data.RegionIsLand(layer, p2);
+            if (l1 && l2)
+            {
+                land_land_edges.Add(edge);
+            }
+            else if (l1 || l2)
+            {
+                land_sea_edges.Add(edge);
+            }
         }
 
-        while (edges_num > 0)
+        float ll_weight = (float)land_sea_edges.Count / land_land_edges.Count;
+        tree.AddMany(land_land_edges, ll_weight);
+        tree.AddMany(land_sea_edges, 1f);
+
+        int edge_num = land_land_edges.Count + land_sea_edges.Count;
+        int ridge_num = (int)(ridge_density * edge_num);
+
+        for (int i = 0; i < ridge_num; i++)
         {
-            edges_num -= 1;
-            generator.SetRidge(layer_index, edges[edges_num], false);
+            int edge = tree.Extract(hash.Eat(i).Float01A);
+            world_data_setter.SetRidge(layer, edge, true);
         }
     }
 }

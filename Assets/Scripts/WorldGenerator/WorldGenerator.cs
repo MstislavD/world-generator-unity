@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-public class WorldGenerator<TTopology> : IWorldDataSetter
+public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
     where TTopology: ITopology
 {
     public enum HeightGeneratorType { Random, Perlin }
@@ -86,6 +86,11 @@ public class WorldGenerator<TTopology> : IWorldDataSetter
         return polygon_data[level][polygon_index].terrain == Terrain.Sea;
     }
 
+    public bool RegionIsLand(int level, int polygon_index)
+    {
+        return polygon_data[level][polygon_index].terrain == Terrain.Land;
+    }
+
     public bool EdgeHasRidge(int level, int edge_index) => edge_data[level][edge_index].ridge;
 
     public int LevelCount => layers.Length;
@@ -159,7 +164,7 @@ public class WorldGenerator<TTopology> : IWorldDataSetter
             TerrainGenerator.GeneratePerlinTerrain(this, topology, height_perlin_settings, level, sea_percentage);
         }
 
-        TerrainGenerator.GenerateRandomRidges(this, topology, level, ridge_density, seed + 1);
+        TerrainGenerator.GenerateRandomRidges(this, this, topology, level, ridge_density, seed + 1);
     }
 
     void generate_regions(int level)

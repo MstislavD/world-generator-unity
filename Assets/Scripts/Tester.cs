@@ -13,7 +13,7 @@ public class Tester : MonoBehaviour
     {
         if (weightedTree)
         {
-            weighted_tree_test2();
+            weighted_tree_test3();
             weightedTree = false;
         }
     }
@@ -58,7 +58,7 @@ public class Tester : MonoBehaviour
         }
 
         string result = "";
-        foreach(int i in extracted)
+        foreach (int i in extracted)
         {
             result += $"{i} -> ";
         }
@@ -112,4 +112,47 @@ public class Tester : MonoBehaviour
 
         Debug.Log($"Extracted {result}");
     }
+
+    void weighted_tree_test3()
+    {
+        WeightedTree<int> tree = new WeightedTree<int>();
+        int nodes_num = 1000;
+        int peek_num = 10000;
+
+        for (int i = 0; i < nodes_num; i++)
+        {
+            tree.Add(i, 1f);
+        }
+
+        Dictionary<int, int> peeks_by_item = new Dictionary<int, int>()
+        {
+            { Random.Range(0, nodes_num), 0 },
+            { Random.Range(0, nodes_num), 0 },
+            { Random.Range(0, nodes_num), 0 }
+        };
+
+        int[] items = peeks_by_item.Keys.ToArray();
+        tree.Add(items[0], nodes_num / 2);
+        tree.Add(items[1], nodes_num / 4);
+        tree.Add(items[2], nodes_num / 8);
+
+        for (int i = 0; i < peek_num; i++)
+        {
+            int item = tree.Peek(Random.Range(0, 1f));
+            if (peeks_by_item.ContainsKey(item))
+            {
+                peeks_by_item[item] += 1;
+            }
+        }
+
+        string result = "";
+        for (int i = 0; i < 3; i++)
+        {
+            result += $"{items[i]} (weight: {nodes_num / Mathf.Pow(2, i + 1)} ) -> {peeks_by_item[items[i]]} peeks; ";
+        }
+        Debug.Log(result);
+
+
+    }
+
 }
