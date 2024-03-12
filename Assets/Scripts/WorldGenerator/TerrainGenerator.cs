@@ -14,10 +14,14 @@ public interface IWorldDataSetter
 
 public interface IWorldData
 {
+    Terrain GetTerrain(int layer, int polygon_index);
+
     bool RegionIsLand(int layer, int polygon_index);
+
+    int ParentRegion(int layer, int polygon_index);
 }
 
-public class TerrainGenerator
+public static class TerrainGenerator
 {
     public static void GenerateRandomTerrain(
         IWorldDataSetter generator,
@@ -131,5 +135,22 @@ public class TerrainGenerator
             int edge = tree.Extract(hash.Eat(i).Float01A);
             world_data_setter.SetRidge(layer, edge, true);
         }
+    }
+
+    public static void InheritTerrain(
+        IWorldData world_data,
+        IWorldDataSetter world_data_setter,
+        ITopology topology,
+        int layer
+        )
+    {
+        int parent_layer = layer - 1;
+        foreach(int polygon_index in topology.GetPolygons())
+        {
+            int parent = world_data.ParentRegion(layer, polygon_index);
+            Terrain terrain = world_data.GetTerrain(parent_layer, parent);
+            world_data_setter.SetTerrain(layer, polygon_index, terrain);
+        }
+
     }
 }

@@ -21,6 +21,8 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
     float ridge_density;
     int seed;
 
+    bool continents_generated;
+
     public WorldGenerator(ITopologyFactory<TTopology> topology_factory, int sphereLevels, Action<string> logger)
     {
         this.logger = logger;
@@ -81,6 +83,10 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
 
     public TTopology GetSphere(int level) => layers[level];
 
+    public Terrain GetTerrain(int level, int polygon_index) => polygon_data[level][polygon_index].terrain;
+
+    public int ParentRegion(int level, int polygon_index) => polygon_data[level][polygon_index].region;
+
     public bool RegionIsSea(int level, int polygon_index)
     {
         return polygon_data[level][polygon_index].terrain == Terrain.Sea;
@@ -97,6 +103,7 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
 
     public void Regenerate()
     {
+        continents_generated = false;
         for (int layer_index = 0; layer_index < layers.Length; layer_index++)
         {
             regenerate_data(layer_index);
@@ -157,14 +164,21 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
         ITopology topology = layers[level];
         if (height_generator_type == HeightGeneratorType.Random)
         {
-            TerrainGenerator.GenerateRandomTerrain(this, topology, level, sea_percentage, seed);
+            if (!continents_generated && topology.PolygonCount > 15)
+            {
+                TerrainGenerator.GenerateRandomTerrain(this, topology, level, sea_percentage, seed);
+                TerrainGenerator.GenerateRandomRidges(this, this, topology, level, ridge_density, seed + 1);
+                continents_generated = true;
+            }
+            else if (continents_generated)
+            {
+                TerrainGenerator.InheritTerrain(this, this, topology, level);
+            }           
         }
         else if (height_generator_type == HeightGeneratorType.Perlin)
         {
             TerrainGenerator.GeneratePerlinTerrain(this, topology, height_perlin_settings, level, sea_percentage);
-        }
-
-        TerrainGenerator.GenerateRandomRidges(this, this, topology, level, ridge_density, seed + 1);
+        }       
     }
 
     void generate_regions(int level)
