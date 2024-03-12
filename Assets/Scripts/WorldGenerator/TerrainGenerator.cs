@@ -18,7 +18,11 @@ public interface IWorldData
 
     bool RegionIsLand(int layer, int polygon_index);
 
-    int ParentRegion(int layer, int polygon_index);
+    int GetParentRegion(int layer, int polygon_index);
+
+    int GetParentEdge(int level, int edge);
+
+    bool HasRidge(int level, int edge);
 }
 
 public static class TerrainGenerator
@@ -138,18 +142,32 @@ public static class TerrainGenerator
     }
 
     public static void InheritTerrain(
-        IWorldData world_data,
-        IWorldDataSetter world_data_setter,
+        IWorldData data,
+        IWorldDataSetter data_setter,
         ITopology topology,
-        int layer
+        int level
         )
     {
-        int parent_layer = layer - 1;
+        int parent_level = level - 1;
         foreach(int polygon_index in topology.GetPolygons())
         {
-            int parent = world_data.ParentRegion(layer, polygon_index);
-            Terrain terrain = world_data.GetTerrain(parent_layer, parent);
-            world_data_setter.SetTerrain(layer, polygon_index, terrain);
+            int parent = data.GetParentRegion(level, polygon_index);
+            Terrain terrain = data.GetTerrain(parent_level, parent);
+            data_setter.SetTerrain(level, polygon_index, terrain);
+        }
+
+        foreach(int edge in topology.GetEdges())
+        {
+            int parent = data.GetParentEdge(level, edge);
+            if (parent > -1)
+            {
+                bool ridge = data.HasRidge(parent_level, parent);
+                data_setter.SetRidge(level, edge, ridge);
+            }
+            else
+            {
+                data_setter.SetRidge(level, edge, false);
+            }
         }
 
     }

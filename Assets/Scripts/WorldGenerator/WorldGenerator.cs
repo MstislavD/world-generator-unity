@@ -85,7 +85,7 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
 
     public Terrain GetTerrain(int level, int polygon_index) => polygon_data[level][polygon_index].terrain;
 
-    public int ParentRegion(int level, int polygon_index) => polygon_data[level][polygon_index].region;
+    public int GetParentRegion(int level, int polygon_index) => polygon_data[level][polygon_index].region;
 
     public bool RegionIsSea(int level, int polygon_index)
     {
@@ -97,7 +97,9 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
         return polygon_data[level][polygon_index].terrain == Terrain.Land;
     }
 
-    public bool EdgeHasRidge(int level, int edge_index) => edge_data[level][edge_index].ridge;
+    public bool HasRidge(int level, int edge_index) => edge_data[level][edge_index].ridge;
+
+    public int GetParentEdge(int level, int edge_index) => GetEdgeIndex(edge_index, level, level - 1);
 
     public int LevelCount => layers.Length;
 

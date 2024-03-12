@@ -75,7 +75,7 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
     {
         profiler = new Profiler();
         sphereLevel = 5;
-        dataLevel = 1;
+        dataLevel = 5;
         generator = new WorldGenerator<PolygonSphereTopology>(this, sphereLevels, logger);
         initiateMeshing = true;
         Regenerate();
@@ -237,7 +237,7 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
         {
             int regionEdgeIndex = generator.GetEdgeIndex(i, sphereLevel, dataLevel);
             bool drawEdge = coloring != Coloring.White && coloring != Coloring.Zones && regionEdgeIndex > -1 &&
-                (coloring == Coloring.Random ? true : generator.EdgeHasRidge(getDataLevel, regionEdgeIndex));
+                (coloring == Coloring.Random ? true : generator.HasRidge(getDataLevel, regionEdgeIndex));
 
             if (drawEdge)
             {
@@ -290,7 +290,7 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
         int dataLevel = getDataLevel;
         PolygonSphere sphere = generator.GetSphere(sphereLevel);
         int regionEdgeIndex = generator.GetEdgeIndex(sphere.GetEdge(p1, p2), sphereLevel, dataLevel);
-        return regionEdgeIndex > -1 && generator.EdgeHasRidge(dataLevel, regionEdgeIndex);
+        return regionEdgeIndex > -1 && generator.HasRidge(dataLevel, regionEdgeIndex);
     }
 
     bool zoneBorder(int p1, int p2)
