@@ -19,6 +19,7 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
     Noise.Settings height_perlin_settings;
     float sea_percentage;
     float ridge_density;
+    float mod_percentage;
     int seed;
 
     bool continents_generated;
@@ -44,6 +45,7 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
         Noise.Settings perlinSettings,
         float sea_percentage,
         float ridge_density,
+        float mod_percentage,
         int seed)
     {
         bool updated = false;
@@ -76,6 +78,12 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
         {
             updated = true;
             this.ridge_density = ridge_density;
+        }
+
+        if (this.mod_percentage != mod_percentage)
+        {
+            updated = true;
+            this.mod_percentage = mod_percentage;
         }
 
         return updated;
@@ -175,6 +183,7 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
             else if (continents_generated)
             {
                 TerrainGenerator.InheritTerrain(this, this, topology, level);
+                TerrainGenerator.ModifyTerrain(this, this, topology, level, sea_percentage, mod_percentage, seed + 2);
             }           
         }
         else if (height_generator_type == HeightGeneratorType.Perlin)

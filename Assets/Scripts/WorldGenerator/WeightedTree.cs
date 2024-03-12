@@ -128,7 +128,7 @@ public class WeightedTree<T>
 
     public void Add(T value, float weight)
     {
-        if (node_by_value.ContainsKey(value))
+        if (node_by_value.ContainsKey(value) && weight != node_by_value[value].weight)
         {
             Node node = node_by_value[value];
             node.change_subtree_weight(weight - node.weight);
@@ -189,6 +189,8 @@ public class WeightedTree<T>
         Node node = root.find_node_by_position(position);
         return node;
     }
+
+    public int Count => node_by_value.Count;
 
     public string About()
     {

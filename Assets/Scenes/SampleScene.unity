@@ -407,11 +407,13 @@ MonoBehaviour:
   seed: 0
   seaLevel: 0.7
   ridgeDensity: 0.1
+  modPercentage: 0.02
   normalsType: 0
   coloring: 1
   smoothPolygons: 1
   smoothEdges: 1
   heightGeneratorType: 0
+  show_necks: 0
   heightPerlinSettings:
     seed: 0
     frequency: 1

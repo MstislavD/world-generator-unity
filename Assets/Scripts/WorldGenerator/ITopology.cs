@@ -1,6 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+
 
 public interface ITopology
 {
@@ -23,6 +25,30 @@ public interface ITopology
     int GetParent(int polygon_index);
 
     IEnumerable<int> GetNeighbors(int polygon_index);
+
+    bool IsNeck(int polygon, Func<int, bool> predicate)
+    {
+        bool current = true;
+        int transitions = -1;
+        foreach (int neighbor in GetNeighbors(polygon).Where(n => n > -1))
+        {
+            if (transitions < 0)
+            {
+                current = predicate(neighbor);
+                transitions = 0;
+            }
+            else if (current != predicate(neighbor))
+            {
+                current = predicate(neighbor);
+                transitions += 1;
+                if (transitions == 3)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 }
 
 public interface ITopologyFactory<T> 

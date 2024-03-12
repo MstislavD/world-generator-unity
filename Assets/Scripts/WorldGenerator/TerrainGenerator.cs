@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,6 +18,8 @@ public interface IWorldData
     Terrain GetTerrain(int layer, int polygon_index);
 
     bool RegionIsLand(int layer, int polygon_index);
+
+    bool RegionIsSea(int level, int polygon);
 
     int GetParentRegion(int layer, int polygon_index);
 
@@ -145,8 +148,7 @@ public static class TerrainGenerator
         IWorldData data,
         IWorldDataSetter data_setter,
         ITopology topology,
-        int level
-        )
+        int level)
     {
         int parent_level = level - 1;
         foreach(int polygon_index in topology.GetPolygons())
@@ -169,6 +171,100 @@ public static class TerrainGenerator
                 data_setter.SetRidge(level, edge, false);
             }
         }
+    }
+
+    public static void ModifyTerrain(
+        IWorldData data,
+        IWorldDataSetter data_setter,
+        ITopology topology,
+        int level,
+        float sea_percentage,
+        float mod_percentage,
+        int seed)
+    {
+        SmallXXHash hash = new SmallXXHash((uint)seed);
+        int region_num = topology.PolygonCount;
+        int target_land_num = (int)(region_num * (1 - sea_percentage));
+        int target_mod_num = (int)(region_num * mod_percentage);
+        int land_num = 0;       
+
+        WeightedTree<int> land_tree = new WeightedTree<int>();
+        WeightedTree<int> sea_tree = new WeightedTree<int>();
+        Func<int, bool> isSea = p => data.RegionIsSea(level, p);
+        Func<int, bool> isLand = p => data.RegionIsLand(level, p);
+        Func<int, bool> not_neck = p => !topology.IsNeck(p, isSea);
+
+        Action make_land = () =>
+        {
+            int polygon = sea_tree.Extract(hash.Float01B);
+            if (topology.GetNeighbors(polygon).Any(isLand) && not_neck(polygon))
+            {
+                land_num += 1;
+                target_mod_num -= 1;
+                data_setter.SetTerrain(level, polygon, Terrain.Land);
+                land_tree.Add(polygon, 1f);
+                foreach (int neighbor in topology.GetNeighbors(polygon).Where(isSea).Where(not_neck))
+                {
+                    sea_tree.Add(neighbor, 1f);
+                }
+            }
+        };
+
+        Action make_sea = () =>
+        {
+            hash = hash.Eat(1);
+            int polygon = land_tree.Extract(hash.Float01B);
+            if (topology.GetNeighbors(polygon).Any(isSea) && not_neck(polygon))
+            {
+                land_num -= 1;
+                target_mod_num -= 1;
+                data_setter.SetTerrain(level, polygon, Terrain.Sea);
+                sea_tree.Add(polygon, 1f);
+                foreach (int neighbor in topology.GetNeighbors(polygon).Where(isLand).Where(not_neck))
+                {
+                    land_tree.Add(neighbor, 1f);
+                }
+            }
+        };
+
+        foreach (int polygon in topology.GetPolygons())
+        {
+            if (isLand(polygon))
+            {
+                land_num += 1;
+                if (topology.GetNeighbors(polygon).Any(isSea) && not_neck(polygon))
+                {
+                    land_tree.Add(polygon, 1f);
+                }
+            }
+            else if (topology.GetNeighbors(polygon).Any(isLand) && not_neck(polygon))
+            {
+                sea_tree.Add(polygon, 1f);
+            }
+        }
+
+        while(land_num < target_land_num)
+        {
+            make_land();
+        }
+
+        while (land_num > target_land_num)
+        {
+           make_sea();
+        }
+
+        while (target_mod_num > 0 && sea_tree.Count > 0 && land_tree.Count > 0)
+        {
+            if (land_num == target_land_num)
+            {
+                make_land();
+            }            
+            if (land_num == target_land_num + 1)
+            {
+                make_sea();
+            }
+        }
+
 
     }
 }

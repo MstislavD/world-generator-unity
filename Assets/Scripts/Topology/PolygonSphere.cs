@@ -5,6 +5,7 @@ using Unity.Mathematics;
 
 using static Unity.Mathematics.math;
 using System;
+using System.Linq;
 
 public struct VertexContext
 {

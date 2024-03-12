@@ -53,6 +53,9 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
     [SerializeField, Range(0f, 1f)]
     float ridgeDensity = 0.1f;
 
+    [SerializeField, Range(0f, 1f)]
+    float modPercentage = 0.1f;
+
     [SerializeField]
     SphereMeshGenerator.NormalType normalsType = SphereMeshGenerator.NormalType.Polyhedron;
 
@@ -68,6 +71,10 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
     [SerializeField]
     WorldGenerator<PolygonSphereTopology>.HeightGeneratorType heightGeneratorType = WorldGenerator<PolygonSphereTopology>.HeightGeneratorType.Random;
 
+    [SerializeField]
+    bool show_necks = false;
+
+    
     [SerializeField]
     Noise.Settings heightPerlinSettings = Noise.Settings.Default;
 
@@ -158,7 +165,8 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
         }
 
         heightPerlinSettings = heightPerlinSettings.ChangeSeed(seed);
-        bool updated = generator.UpdateSettings(heightGeneratorType, heightPerlinSettings, seaLevel, ridgeDensity, seed);
+        bool updated = generator.UpdateSettings(
+            heightGeneratorType, heightPerlinSettings, seaLevel, ridgeDensity, modPercentage, seed);
 
         if (updated)
         {
@@ -308,15 +316,18 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
 
     void recolorMesh()
     {
+        int data_level = getDataLevel;
         SmallXXHash hash = new SmallXXHash((uint)seed);
         PolygonSphere sphere = generator.GetSphere(sphereLevel);
-        PolygonSphere dataSphere = generator.GetSphere(getDataLevel);
+        PolygonSphere dataSphere = generator.GetSphere(data_level);
+
+        ITopology topology = generator.GetSphere(data_level);
 
         List<Color> colors = new List<Color>();
 
         for (int i = 0; i < sphere.PolygonCount; i++)
         {
-            int regionIndex = generator.GetPolygonIndex(i, sphereLevel, dataLevel);
+            int regionIndex = generator.GetPolygonIndex(i, sphereLevel, data_level);
             var type = dataSphere.GetPolygonType(regionIndex);
 
             Color color = Color.white;
@@ -326,7 +337,12 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
             }
             else if (coloring == Coloring.Terrain)
             {
-                color = generator.RegionIsSea(getDataLevel, regionIndex) ? Color.blue : Color.green;
+                bool isSea = generator.RegionIsSea(data_level, regionIndex);
+                color = isSea ? Color.blue : Color.green;
+                if (show_necks && topology.IsNeck(regionIndex, p => generator.RegionIsLand(data_level, p)))
+                {
+                    color = isSea ? Color.grey : Color.red;
+                }
             }
             else if (coloring == Coloring.Zones)
             {
