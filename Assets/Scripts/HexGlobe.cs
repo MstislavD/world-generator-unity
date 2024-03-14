@@ -10,6 +10,20 @@ public class PolygonSphereTopology : PolygonSphere, ITopology
     public PolygonSphereTopology(int band_size) : base(band_size) { }
 }
 
+public struct CColors
+{
+    public static Color deep_sea = new Color(0, 0, 139);
+
+    static Dictionary<Terrain, Color> terrain_colors = new Dictionary<Terrain, Color>()
+    {
+        {Terrain.Deep, deep_sea },
+        {Terrain.Shallow, Color.blue },
+        {Terrain.Land, Color.green }
+    };
+
+    public static Color GetTerrainColor(Terrain terrain) => terrain_colors[terrain];
+}
+
 public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
 {
     static Action<string> logger = s => Debug.Log(s);
@@ -281,7 +295,7 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
         return generator.GetPolygonIndex(p1, sphereLevel, dataLevel) != generator.GetPolygonIndex(p2, sphereLevel, dataLevel);
     }
 
-    bool terrainBorder(int p1, int p2)
+    bool sea_land_border(int p1, int p2)
     {
         int dataLevel = getDataLevel;
 
@@ -289,6 +303,18 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
         int regionIndex2 = generator.GetPolygonIndex(p2, sphereLevel, dataLevel);
         bool t1 = generator.RegionIsSea(dataLevel, regionIndex1);
         bool t2 = generator.RegionIsSea(dataLevel, regionIndex2);
+
+        return t1 != t2;
+    }
+
+    bool terrain_border(int p1, int p2)
+    {
+        int dataLevel = getDataLevel;
+
+        int regionIndex1 = generator.GetPolygonIndex(p1, sphereLevel, dataLevel);
+        int regionIndex2 = generator.GetPolygonIndex(p2, sphereLevel, dataLevel);
+        Terrain t1 = generator.GetTerrain(dataLevel, regionIndex1);
+        Terrain t2 = generator.GetTerrain(dataLevel, regionIndex2);
 
         return t1 != t2;
     }
@@ -311,7 +337,7 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
 
     bool terrainOrRidgeBorder(int p1, int p2)
     {
-        return terrainBorder(p1, p2) || ridgeBorder(p1, p2);
+        return sea_land_border(p1, p2) || terrain_border(p1, p2) || ridgeBorder(p1, p2);
     }
 
     void recolorMesh()
@@ -338,7 +364,7 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
             else if (coloring == Coloring.Terrain)
             {
                 bool isSea = generator.RegionIsSea(data_level, regionIndex);
-                color = isSea ? Color.blue : Color.green;
+                color = CColors.GetTerrainColor(generator.GetTerrain(data_level, regionIndex));
                 if (show_necks && topology.IsNeck(regionIndex, p => generator.RegionIsLand(data_level, p)))
                 {
                     color = isSea ? Color.grey : Color.red;

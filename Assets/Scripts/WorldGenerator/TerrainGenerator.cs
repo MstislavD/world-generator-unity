@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-public enum Terrain { Sea, Land }
+public enum Terrain { Deep, Shallow, Land }
 
 public interface IWorldDataSetter
 {
@@ -55,11 +55,22 @@ public static class TerrainGenerator
             regions[index] = regions[region_num];
         }
 
+        int shelf_num = sea_region_num / 2;
+        while (region_num > shelf_num)
+        {
+            int index = hash.Integer(0, region_num);
+            generator.SetTerrain(layer_index, regions[index], Terrain.Shallow);
+            region_num -= 1;
+            hash = hash.Eat(1);
+            regions[index] = regions[region_num];
+        }
+
         while (region_num > 0)
         {
             region_num -= 1;
-            generator.SetTerrain(layer_index, regions[region_num], Terrain.Sea);
+            generator.SetTerrain(layer_index, regions[region_num], Terrain.Deep);
         }
+
     }
 
     public static void GeneratePerlinTerrain(
@@ -94,7 +105,7 @@ public static class TerrainGenerator
 
         for (int i = 0; i < polygon_num; i++)
         {
-            Terrain terrain = height[i] < sea_level ? Terrain.Sea : Terrain.Land;
+            Terrain terrain = height[i] < sea_level ? Terrain.Deep : Terrain.Land;
             generator.SetTerrain(layer_index, i, terrain);
         }
     }
@@ -218,7 +229,7 @@ public static class TerrainGenerator
             {
                 land_num -= 1;
                 target_mod_num -= 1;
-                data_setter.SetTerrain(level, polygon, Terrain.Sea);
+                data_setter.SetTerrain(level, polygon, Terrain.Deep);
                 sea_tree.Add(polygon, 1f);
                 foreach (int neighbor in topology.GetNeighbors(polygon).Where(isLand).Where(not_neck))
                 {

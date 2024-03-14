@@ -1,7 +1,9 @@
 
 public readonly struct SmallXXHash
 {
-	const uint primeA = 0b10011110001101110111100110110001;
+	const float mf = (1f / 4294967295f);
+
+    const uint primeA = 0b10011110001101110111100110110001;
 	const uint primeB = 0b10000101111010111100101001110111;
 	const uint primeC = 0b11000010101100101010111000111101;
 	const uint primeD = 0b00100111110101001110101100101111;
@@ -63,6 +65,13 @@ public readonly struct SmallXXHash
 	public float Float01C => ByteC * (1f / 255f);
 
 	public float Float01D => ByteD * (1f / 255f);
+
+	public int Integer(int minIncl, int maxExcl)
+	{
+		int delta = maxExcl - minIncl;
+		int result = (int)(this * mf * delta) + minIncl;
+		return result;
+	}
 
 	public uint GetBits(int count, int shift) => (this >> shift) & (uint)((1 << count) - 1);
 

@@ -97,7 +97,7 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
 
     public bool RegionIsSea(int level, int polygon_index)
     {
-        return polygon_data[level][polygon_index].terrain == Terrain.Sea;
+        return polygon_data[level][polygon_index].terrain < Terrain.Land;
     }
 
     public bool RegionIsLand(int level, int polygon_index)
