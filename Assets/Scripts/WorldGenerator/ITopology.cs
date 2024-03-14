@@ -49,6 +49,59 @@ public interface ITopology
         }
         return false;
     }
+
+    bool IsNeck<T>(int polygon, Func<int, T> quality)
+    {
+        T q = quality(polygon);
+        bool current = true;
+        int transitions = -1;
+        foreach (int neighbor in GetNeighbors(polygon).Where(n => n > -1))
+        {
+            bool predicate = quality(neighbor).Equals(q);
+            if (transitions < 0)
+            {
+                current = predicate;
+                transitions = 0;
+            }
+            else if (current != predicate)
+            {
+                current = predicate;
+                transitions += 1;
+                if (transitions == 3)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    bool IsNeck<T1, T2>(int polygon, Func<int, T1> quality1, Func<int, T2> quality2)
+    {
+        T1 q1 = quality1(polygon);
+        T2 q2 = quality2(polygon);
+        bool current = true;
+        int transitions = -1;
+        foreach (int neighbor in GetNeighbors(polygon).Where(n => n > -1))
+        {
+            bool predicate = quality1(neighbor).Equals(q1) && quality2(neighbor).Equals(q2);
+            if (transitions < 0)
+            {
+                current = predicate;
+                transitions = 0;
+            }
+            else if (current != predicate)
+            {
+                current = predicate;
+                transitions += 1;
+                if (transitions == 3)
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 }
 
 public interface ITopologyFactory<T> 

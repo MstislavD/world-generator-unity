@@ -12,7 +12,7 @@ public class PolygonSphereTopology : PolygonSphere, ITopology
 
 public struct CColors
 {
-    public static Color deep_sea = new Color(0, 0, 139);
+    public static Color deep_sea = new Color(0, 0, 139) / 255f;
 
     static Dictionary<Terrain, Color> terrain_colors = new Dictionary<Terrain, Color>()
     {
@@ -28,7 +28,7 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
 {
     static Action<string> logger = s => Debug.Log(s);
 
-    public enum Coloring { Zones, Terrain, Random, White }
+    public enum Coloring { Zones, Terrain, Random, White, Continents }
 
     static Color[] neighborColors = { Color.red, Color.white, Color.white, Color.cyan, Color.blue, Color.magenta };
 
@@ -69,6 +69,9 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
 
     [SerializeField, Range(0f, 1f)]
     float modPercentage = 0.1f;
+
+    [SerializeField, Range(0f, 1f)]
+    float islandPercentage = 0.05f;
 
     [SerializeField]
     SphereMeshGenerator.NormalType normalsType = SphereMeshGenerator.NormalType.Polyhedron;
@@ -131,6 +134,7 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
                 int polygonIndex = triagleIndex < 60 ? triagleIndex / 5 : (triagleIndex - 60) / 6 + 12;
 
                 logger(sphere.GetPolygonInfo(polygonIndex));
+                logger($"Continent: {generator.GetContinent(sphereLevel, polygonIndex)}");
 
                 modifiedColors = (Color[])defaultColors.Clone();
                 colorPolygonCenter(polygonIndex, modifiedColors, Color.black);
@@ -180,7 +184,7 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
 
         heightPerlinSettings = heightPerlinSettings.ChangeSeed(seed);
         bool updated = generator.UpdateSettings(
-            heightGeneratorType, heightPerlinSettings, seaLevel, ridgeDensity, modPercentage, seed);
+            heightGeneratorType, heightPerlinSettings, seaLevel, ridgeDensity, modPercentage, islandPercentage, seed);
 
         if (updated)
         {
@@ -348,6 +352,7 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
         PolygonSphere dataSphere = generator.GetSphere(data_level);
 
         ITopology topology = generator.GetSphere(data_level);
+        Func<int, bool> isSea = p => generator.RegionIsSea(data_level, p);
 
         List<Color> colors = new List<Color>();
 
@@ -363,16 +368,26 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
             }
             else if (coloring == Coloring.Terrain)
             {
-                bool isSea = generator.RegionIsSea(data_level, regionIndex);
                 color = CColors.GetTerrainColor(generator.GetTerrain(data_level, regionIndex));
-                if (show_necks && topology.IsNeck(regionIndex, p => generator.RegionIsLand(data_level, p)))
+                if (show_necks && topology.IsNeck(regionIndex, isSea))
                 {
-                    color = isSea ? Color.grey : Color.red;
+                    color = isSea(regionIndex) ? Color.grey : Color.red;
                 }
             }
             else if (coloring == Coloring.Zones)
             {
                 color = typeColors[(int)type];
+            }
+            else if (coloring == Coloring.Continents)
+            {
+                int continent = generator.GetContinent(data_level, regionIndex);
+                color = isSea(regionIndex) ? Color.blue :
+                    (continent < 0 ? Color.black : random_color(hash.Eat(continent)));
+
+                if (show_necks && topology.IsNeck(regionIndex, p => generator.GetContinent(data_level, p), isSea))
+                {
+                    color = isSea(regionIndex) ? Color.gray : Color.red;
+                }
             }
 
             colors.AddRange(color.Populate(sphere.GetSides(i) + 1));

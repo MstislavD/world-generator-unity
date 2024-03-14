@@ -403,11 +403,12 @@ MonoBehaviour:
   edgeMesh: {fileID: 1556763577}
   sphereCollider: {fileID: 1968548733}
   sphereLevels: 6
-  debugSeed: 0
-  seed: 0
+  debugSeed: 1
+  seed: 1701157455
   seaLevel: 0.7
   ridgeDensity: 0.1
   modPercentage: 0.02
+  islandPercentage: 0.5
   normalsType: 0
   coloring: 1
   smoothPolygons: 1

@@ -20,6 +20,7 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
     float sea_percentage;
     float ridge_density;
     float mod_percentage;
+    float island_percentage;
     int seed;
 
     bool continents_generated;
@@ -46,6 +47,7 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
         float sea_percentage,
         float ridge_density,
         float mod_percentage,
+        float island_percentage,
         int seed)
     {
         bool updated = false;
@@ -86,6 +88,12 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
             this.mod_percentage = mod_percentage;
         }
 
+        if (this.island_percentage != island_percentage)
+        {
+            updated = true;
+            this.island_percentage = island_percentage;
+        }
+
         return updated;
     }
 
@@ -94,6 +102,8 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
     public Terrain GetTerrain(int level, int polygon_index) => polygon_data[level][polygon_index].terrain;
 
     public int GetParentRegion(int level, int polygon_index) => polygon_data[level][polygon_index].region;
+
+    public int GetContinent(int level, int polygon) => polygon_data[level][polygon].continent;
 
     public bool RegionIsSea(int level, int polygon_index)
     {
@@ -137,6 +147,8 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
         }
         return edgeIndex;
     }
+
+    public void SetContinent(int level, int polygon, int continent) => polygon_data[level][polygon].continent = continent;
 
     public void SetTerrain(int layer_index, int polygon_index, Terrain terrain)
     {
@@ -183,7 +195,8 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
             else if (continents_generated)
             {
                 TerrainGenerator.InheritTerrain(this, this, topology, level);
-                TerrainGenerator.ModifyTerrain(this, this, topology, level, sea_percentage, mod_percentage, seed + 2);
+                TerrainGenerator.ModifyTerrain(this, this, topology, level,
+                    sea_percentage, mod_percentage, island_percentage, seed + 2);
             }           
         }
         else if (height_generator_type == HeightGeneratorType.Perlin)
