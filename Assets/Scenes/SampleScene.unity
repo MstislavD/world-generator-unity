@@ -403,7 +403,7 @@ MonoBehaviour:
   edgeMesh: {fileID: 1556763577}
   sphereCollider: {fileID: 1968548733}
   sphereLevels: 6
-  debugSeed: 1
+  debugSeed: 0
   seed: 1701157455
   seaLevel: 0.7
   ridgeDensity: 0.1
@@ -415,6 +415,7 @@ MonoBehaviour:
   smoothEdges: 1
   heightGeneratorType: 0
   show_necks: 0
+  show_features: 0
   heightPerlinSettings:
     seed: 0
     frequency: 1
