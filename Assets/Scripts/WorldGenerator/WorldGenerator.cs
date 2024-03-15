@@ -14,6 +14,7 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
 
     PolygonData[][] polygon_data;
     EdgeData[][] edge_data;
+    List<ContinentData> continent_data;
 
     HeightGeneratorType height_generator_type;
     Noise.Settings height_perlin_settings;
@@ -32,6 +33,7 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
         layers = new TTopology[sphereLevels];
         polygon_data = new PolygonData[sphereLevels][];
         edge_data = new EdgeData[sphereLevels][];
+        continent_data = new List<ContinentData>();
 
         for (int i = 0; i < sphereLevels; i++)
         {
@@ -119,6 +121,8 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
 
     public int GetParentEdge(int level, int edge_index) => GetEdgeIndex(edge_index, level, level - 1);
 
+    public RegionFeature GetContinentFeature(int continent) => continent_data[continent].feature;
+
     public int LevelCount => layers.Length;
 
     public void Regenerate()
@@ -148,7 +152,14 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
         return edgeIndex;
     }
 
+    public void AddContinent()
+    {
+        continent_data.Add(new ContinentData());
+    }
+
     public void SetContinent(int level, int polygon, int continent) => polygon_data[level][polygon].continent = continent;
+
+    public void SetContinentFeature(int continent, RegionFeature feature) => continent_data[continent].feature = feature;
 
     public void SetTerrain(int layer_index, int polygon_index, Terrain terrain)
     {

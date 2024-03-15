@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 public enum Terrain { Deep, Shallow, Land }
 
@@ -13,6 +14,10 @@ public interface IWorldDataSetter
     void SetRidge(int layer_index, int edge_index, bool value);
 
     void SetContinent(int level, int polygon, int continent);
+
+    void SetContinentFeature(int continent, RegionFeature feature);
+
+    void AddContinent();
 }
 
 public interface IWorldData
@@ -49,11 +54,26 @@ public static class TerrainGenerator
         SmallXXHash hash = new SmallXXHash((uint)seed);
         int continent = 0;
 
+        Action<int> set_continent_feature = continent =>
+        {
+            hash = hash.Eat(1);
+            if (hash.Float01C > 0.5f)
+            {
+                data_setter.SetContinentFeature(continent, RegionFeature.Snaky);
+            }
+            else
+            {
+                data_setter.SetContinentFeature(continent, RegionFeature.Round);
+            }
+        };
+
         while (region_num > sea_region_num)
         {
             int index = hash.Integer(0, region_num);
             data_setter.SetTerrain(level, regions[index], Terrain.Land);
+            data_setter.AddContinent();
             data_setter.SetContinent(level, regions[index], continent);
+            set_continent_feature(continent);
             continent += 1;
             region_num -= 1;
             hash = hash.Eat(1);
@@ -65,7 +85,9 @@ public static class TerrainGenerator
         {
             int index = hash.Integer(0, region_num);
             data_setter.SetTerrain(level, regions[index], Terrain.Shallow);
+            data_setter.AddContinent();
             data_setter.SetContinent(level, regions[index], continent);
+            //set_continent_feature(continent);
             continent += 1;
             region_num -= 1;
             hash = hash.Eat(1);
@@ -222,8 +244,43 @@ public static class TerrainGenerator
 
         int island_num = (int)(Mathf.Pow(region_num, 0.5f) * island_percentage);
 
+        Action<int> convert_continent = (int polygon) =>
+        {
+            List<int> n_conts = new List<int>();
+            int cont = data.GetContinent(level, polygon);
+            foreach (int n in topology.GetNeighbors(polygon).Where(isLand))
+            {
+                int n_cont = data.GetContinent(level, n);
+                if (n_cont == cont)
+                {
+                    return;
+                }
+                else
+                {
+                    n_conts.Add(n_cont);
+                }                
+            }
+
+            hash = hash.Eat(1);
+            int i = hash.Integer(0, n_conts.Count);
+            data_setter.SetContinent(level, polygon, n_conts[i]);
+        };
+
+        Func<int, float> get_weight_land = (polygon) =>
+        {
+            int factor = topology.GetNeighbors(polygon).Count(isSea);
+            return Mathf.Pow(2f, factor);
+        };
+
+        Func<int, float> get_weight_sea = (polygon) =>
+        {
+            int factor = topology.GetNeighbors(polygon).Count(isLand);
+            return Mathf.Pow(2f, factor);
+        };
+
         Action make_island = () =>
         {
+            hash = hash.Eat(1);
             int polygon = shallow_tree.Extract(hash.Float01B);
             if (topology.GetNeighbors(polygon).All(isSea))
             {
@@ -236,16 +293,18 @@ public static class TerrainGenerator
 
         Action make_land = () =>
         {
+            hash = hash.Eat(1);
             int polygon = sea_tree.Extract(hash.Float01B);
             if (can_convert(polygon))
             {
                 land_num += 1;
                 target_mod_num -= 1;
                 data_setter.SetTerrain(level, polygon, Terrain.Land);
-                land_tree.Add(polygon, 1f);
+                land_tree.Add(polygon, get_weight_land(polygon));
+                convert_continent(polygon);
                 foreach (int neighbor in topology.GetNeighbors(polygon).Where(isSea).Where(can_convert))
                 {
-                    sea_tree.Add(neighbor, 1f);
+                    sea_tree.Add(neighbor, get_weight_sea(polygon));
                 }
             }
         };
@@ -259,10 +318,10 @@ public static class TerrainGenerator
                 land_num -= 1;
                 target_mod_num -= 1;
                 data_setter.SetTerrain(level, polygon, Terrain.Shallow);
-                sea_tree.Add(polygon, 1f);
+                sea_tree.Add(polygon, get_weight_sea(polygon));
                 foreach (int neighbor in topology.GetNeighbors(polygon).Where(isLand).Where(can_convert))
                 {
-                    land_tree.Add(neighbor, 1f);
+                    land_tree.Add(neighbor, get_weight_land(polygon));
                 }
             }
         };
@@ -274,12 +333,12 @@ public static class TerrainGenerator
                 land_num += 1;
                 if (can_convert(polygon))
                 {
-                    land_tree.Add(polygon, 1f);
+                    land_tree.Add(polygon, get_weight_land(polygon));
                 }
             }
             else if (can_convert(polygon))
             {
-                sea_tree.Add(polygon, 1f);
+                sea_tree.Add(polygon, get_weight_sea(polygon));
             }
             else if (topology.GetNeighbors(polygon).All(isSea) && data.GetTerrain(level, polygon) == Terrain.Shallow)
             {

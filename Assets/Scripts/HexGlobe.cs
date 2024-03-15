@@ -21,8 +21,17 @@ public struct CColors
         {Terrain.Land, Color.green }
     };
 
+    static Dictionary<RegionFeature, Color> feature_colors = new Dictionary<RegionFeature, Color>()
+    {
+        {RegionFeature.None, Color.white },
+        {RegionFeature.Snaky, Color.red },
+        {RegionFeature.Round, Color.green }
+    };
+
     public static Color GetTerrainColor(Terrain terrain) => terrain_colors[terrain];
-}
+
+    public static Color GetFeatureColor(RegionFeature feature) => feature_colors[feature];
+} 
 
 public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
 {
@@ -90,6 +99,9 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
 
     [SerializeField]
     bool show_necks = false;
+
+    [SerializeField]
+    bool show_features = false;
 
     
     [SerializeField]
@@ -387,6 +399,11 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
                 if (show_necks && topology.IsNeck(regionIndex, p => generator.GetContinent(data_level, p), isSea))
                 {
                     color = isSea(regionIndex) ? Color.gray : Color.red;
+                }
+
+                if (show_features && !isSea(regionIndex))
+                {
+                    color = CColors.GetFeatureColor(generator.GetContinentFeature(continent));
                 }
             }
 

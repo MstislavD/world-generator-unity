@@ -1,6 +1,8 @@
 using System.Collections;
 using System.Collections.Generic;
 
+public enum RegionFeature { None, Snaky, Round }
+
 public struct PolygonData
 {
     //public float height;
@@ -12,4 +14,9 @@ public struct PolygonData
 public struct EdgeData
 {
     public bool ridge;
+}
+
+public class ContinentData
+{
+    public RegionFeature feature;
 }
