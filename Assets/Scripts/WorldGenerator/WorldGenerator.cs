@@ -107,6 +107,8 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
 
     public int GetContinent(int level, int polygon) => polygon_data[level][polygon].continent;
 
+    public RegionFeature GetFeature (int level, int polygon) => continent_data[GetContinent(level, polygon)].feature;
+
     public bool RegionIsSea(int level, int polygon_index)
     {
         return polygon_data[level][polygon_index].terrain < Terrain.Land;

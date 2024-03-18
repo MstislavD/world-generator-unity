@@ -35,6 +35,8 @@ public interface IWorldData
     int GetContinent(int level, int polygon);
 
     bool HasRidge(int level, int edge);
+
+    RegionFeature GetFeature(int level, int polygon);
 }
 
 public static class TerrainGenerator
@@ -226,6 +228,8 @@ public static class TerrainGenerator
         float island_percentage,
         int seed)
     {
+        float weight_base = 2f;
+
         SmallXXHash hash = new SmallXXHash((uint)seed);
         int region_num = topology.PolygonCount;
         int target_land_num = (int)(region_num * (1 - sea_percentage));
@@ -235,20 +239,22 @@ public static class TerrainGenerator
         WeightedTree<int> land_tree = new WeightedTree<int>();
         WeightedTree<int> sea_tree = new WeightedTree<int>();
         WeightedTree<int> shallow_tree = new WeightedTree<int>();
-        Func<int, bool> isSea = p => data.RegionIsSea(level, p);
-        Func<int, bool> isLand = p => data.RegionIsLand(level, p);
-        Func<int, bool> not_neck = p => !topology.IsNeck(p, isSea);
-        Func<int, bool> not_cont_neck = p => isSea(p) || !topology.IsNeck(p, p => data.GetContinent(level, p), isSea);
+        Func<int, bool> is_sea = p => data.RegionIsSea(level, p);
+        Func<int, bool> is_land = p => data.RegionIsLand(level, p);
+        Func<int, bool> not_neck = p => !topology.IsNeck(p, is_sea);
+        Func<int, bool> not_cont_neck = p => is_sea(p) || !topology.IsNeck(p, p => data.GetContinent(level, p), is_sea);
         Func<int, bool> can_convert =
-            p => topology.GetNeighbors(p).Any(isLand) && topology.GetNeighbors(p).Any(isSea) && not_neck(p) && not_cont_neck(p);
+            p => topology.GetNeighbors(p).Any(is_land) && topology.GetNeighbors(p).Any(is_sea) && not_neck(p) && not_cont_neck(p);
+        Func<int, int> get_continent = p => data.GetContinent(level, p);
 
         int island_num = (int)(Mathf.Pow(region_num, 0.5f) * island_percentage);
 
         Action<int> convert_continent = (int polygon) =>
         {
-            List<int> n_conts = new List<int>();
             int cont = data.GetContinent(level, polygon);
-            foreach (int n in topology.GetNeighbors(polygon).Where(isLand))
+
+            List<int> n_conts = new List<int>();
+            foreach (int n in topology.GetNeighbors(polygon).Where(is_land))
             {
                 int n_cont = data.GetContinent(level, n);
                 if (n_cont == cont)
@@ -258,9 +264,10 @@ public static class TerrainGenerator
                 else
                 {
                     n_conts.Add(n_cont);
-                }                
+                }
             }
 
+            //List<int> n_conts = topology.GetNeighbors(polygon).Where(is_land).Select(get_continent).Where(c => c != cont).ToList();
             hash = hash.Eat(1);
             int i = hash.Integer(0, n_conts.Count);
             data_setter.SetContinent(level, polygon, n_conts[i]);
@@ -268,21 +275,32 @@ public static class TerrainGenerator
 
         Func<int, float> get_weight_land = (polygon) =>
         {
-            int factor = topology.GetNeighbors(polygon).Count(isSea);
-            return Mathf.Pow(2f, factor);
+            int sea_num = topology.GetNeighbors(polygon).Count(is_sea);
+            RegionFeature feature = data.GetFeature(level, polygon);
+            int factor = 
+                feature == RegionFeature.Round ? sea_num - 3 :
+                feature == RegionFeature.Snaky ? 3 - sea_num :
+                0;            
+            return Mathf.Pow(weight_base, factor);
         };
 
         Func<int, float> get_weight_sea = (polygon) =>
         {
-            int factor = topology.GetNeighbors(polygon).Count(isLand);
-            return Mathf.Pow(2f, factor);
+            int n = topology.GetNeighbors(polygon).First(is_land);
+            RegionFeature feature = data.GetFeature(level, n);
+            int sea_num = topology.GetNeighbors(polygon).Count(is_sea);
+            int factor =
+               feature == RegionFeature.Round ? 3 - sea_num :
+               feature == RegionFeature.Snaky ? sea_num - 3 :
+               0;
+            return Mathf.Pow(weight_base, factor);
         };
 
         Action make_island = () =>
         {
             hash = hash.Eat(1);
             int polygon = shallow_tree.Extract(hash.Float01B);
-            if (topology.GetNeighbors(polygon).All(isSea))
+            if (topology.GetNeighbors(polygon).All(is_sea))
             {
                 land_num += 1;
                 target_mod_num -= 1;
@@ -300,9 +318,9 @@ public static class TerrainGenerator
                 land_num += 1;
                 target_mod_num -= 1;
                 data_setter.SetTerrain(level, polygon, Terrain.Land);
-                land_tree.Add(polygon, get_weight_land(polygon));
                 convert_continent(polygon);
-                foreach (int neighbor in topology.GetNeighbors(polygon).Where(isSea).Where(can_convert))
+                land_tree.Add(polygon, get_weight_land(polygon));
+                foreach (int neighbor in topology.GetNeighbors(polygon).Where(is_sea).Where(can_convert))
                 {
                     sea_tree.Add(neighbor, get_weight_sea(polygon));
                 }
@@ -319,7 +337,7 @@ public static class TerrainGenerator
                 target_mod_num -= 1;
                 data_setter.SetTerrain(level, polygon, Terrain.Shallow);
                 sea_tree.Add(polygon, get_weight_sea(polygon));
-                foreach (int neighbor in topology.GetNeighbors(polygon).Where(isLand).Where(can_convert))
+                foreach (int neighbor in topology.GetNeighbors(polygon).Where(is_land).Where(can_convert))
                 {
                     land_tree.Add(neighbor, get_weight_land(polygon));
                 }
@@ -328,7 +346,7 @@ public static class TerrainGenerator
 
         foreach (int polygon in topology.GetPolygons())
         {
-            if (isLand(polygon))
+            if (is_land(polygon))
             {
                 land_num += 1;
                 if (can_convert(polygon))
@@ -340,7 +358,7 @@ public static class TerrainGenerator
             {
                 sea_tree.Add(polygon, get_weight_sea(polygon));
             }
-            else if (topology.GetNeighbors(polygon).All(isSea) && data.GetTerrain(level, polygon) == Terrain.Shallow)
+            else if (topology.GetNeighbors(polygon).All(is_sea) && data.GetTerrain(level, polygon) == Terrain.Shallow)
             {
                 shallow_tree.Add(polygon, 1f);
             }
