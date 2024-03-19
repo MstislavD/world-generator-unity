@@ -107,7 +107,11 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
 
     public int GetContinent(int level, int polygon) => polygon_data[level][polygon].continent;
 
-    public RegionFeature GetFeature (int level, int polygon) => continent_data[GetContinent(level, polygon)].feature;
+    public bool HasFeature (int level, int polygon, RegionFeature feature)
+    {
+        int continent = GetContinent(level, polygon);
+        return continent == -1 ? feature == RegionFeature.None : continent_data[continent].feature == feature;
+    }
 
     public bool RegionIsSea(int level, int polygon_index)
     {
@@ -123,7 +127,7 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
 
     public int GetParentEdge(int level, int edge_index) => GetEdgeIndex(edge_index, level, level - 1);
 
-    public RegionFeature GetContinentFeature(int continent) => continent_data[continent].feature;
+    public bool HasContinentFeature(int continent, RegionFeature feature) => continent_data[continent].feature == feature;
 
     public int LevelCount => layers.Length;
 
@@ -161,7 +165,7 @@ public class WorldGenerator<TTopology> : IWorldData, IWorldDataSetter
 
     public void SetContinent(int level, int polygon, int continent) => polygon_data[level][polygon].continent = continent;
 
-    public void SetContinentFeature(int continent, RegionFeature feature) => continent_data[continent].feature = feature;
+    public void AddContinentFeature(int continent, RegionFeature feature) => continent_data[continent].feature = feature;
 
     public void SetTerrain(int layer_index, int polygon_index, Terrain terrain)
     {

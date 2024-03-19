@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.VisualScripting;
 using UnityEngine;
 using static UnityEngine.Rendering.DebugUI.Table;
 
@@ -28,6 +29,8 @@ public struct CColors
         {RegionFeature.Round, Color.green }
     };
 
+    public static IEnumerable<RegionFeature> GetFeatures => feature_colors.Keys;
+
     public static Color GetTerrainColor(Terrain terrain) => terrain_colors[terrain];
 
     public static Color GetFeatureColor(RegionFeature feature) => feature_colors[feature];
@@ -37,7 +40,7 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
 {
     static Action<string> logger = s => Debug.Log(s);
 
-    public enum Coloring { Zones, Terrain, Random, White, Continents }
+    public enum Coloring { Zones, Terrain, Random, White, Continents, Features }
 
     static Color[] neighborColors = { Color.red, Color.white, Color.white, Color.cyan, Color.blue, Color.magenta };
 
@@ -76,8 +79,8 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
     [SerializeField, Range(0f, 1f)]
     float ridgeDensity = 0.1f;
 
-    [SerializeField, Range(0f, 1f)]
-    float modPercentage = 0.1f;
+    [SerializeField, Range(0f, 0.1f)]
+    float modPercentage = 0.02f;
 
     [SerializeField, Range(0f, 1f)]
     float islandPercentage = 0.05f;
@@ -99,10 +102,6 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
 
     [SerializeField]
     bool show_necks = false;
-
-    [SerializeField]
-    bool show_features = false;
-
     
     [SerializeField]
     Noise.Settings heightPerlinSettings = Noise.Settings.Default;
@@ -249,6 +248,8 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
             coloring == Coloring.Random ? regionBorder :
             coloring == Coloring.Terrain ? terrainOrRidgeBorder :
             coloring == Coloring.Zones ? zoneBorder :
+            coloring == Coloring.Continents ? terrainOrRidgeBorder :
+            coloring == Coloring.Features ? terrainOrRidgeBorder :
             null;
 
         return advanced_meshing ?
@@ -371,7 +372,6 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
         for (int i = 0; i < sphere.PolygonCount; i++)
         {
             int regionIndex = generator.GetPolygonIndex(i, sphereLevel, data_level);
-            var type = dataSphere.GetPolygonType(regionIndex);
 
             Color color = Color.white;
             if (coloring == Coloring.Random)
@@ -388,6 +388,7 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
             }
             else if (coloring == Coloring.Zones)
             {
+                var type = dataSphere.GetPolygonType(regionIndex);
                 color = typeColors[(int)type];
             }
             else if (coloring == Coloring.Continents)
@@ -399,12 +400,13 @@ public class HexGlobe : MonoBehaviour, ITopologyFactory<PolygonSphereTopology>
                 if (show_necks && topology.IsNeck(regionIndex, p => generator.GetContinent(data_level, p), isSea))
                 {
                     color = isSea(regionIndex) ? Color.gray : Color.red;
-                }
-
-                if (show_features && !isSea(regionIndex))
-                {
-                    color = CColors.GetFeatureColor(generator.GetContinentFeature(continent));
-                }
+                }               
+            }
+            else if  (coloring == Coloring.Features)
+            {
+                int continent = generator.GetContinent(data_level, regionIndex);
+                RegionFeature feature = CColors.GetFeatures.First(f => generator.HasFeature(data_level, regionIndex, f));
+                color = isSea(regionIndex) ? Color.blue : CColors.GetFeatureColor(feature);
             }
 
             colors.AddRange(color.Populate(sphere.GetSides(i) + 1));
